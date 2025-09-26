@@ -1,0 +1,6 @@
+file 'C:\Users\LalitBagora\Desktop\template\backend\assets\output\clip_scene1.mp4'
+file 'C:\Users\LalitBagora\Desktop\template\backend\assets\output\clip_scene2.mp4'
+file 'C:\Users\LalitBagora\Desktop\template\backend\assets\output\clip_scene3.mp4'
+file 'C:\Users\LalitBagora\Desktop\template\backend\assets\output\clip_scene4.mp4'
+file 'C:\Users\LalitBagora\Desktop\template\backend\assets\output\clip_scene5.mp4'
+file 'C:\Users\LalitBagora\Desktop\template\backend\assets\output\clip_scene6.mp4'
