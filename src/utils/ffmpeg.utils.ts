@@ -1,23 +1,18 @@
-// src/utils/ffmpeg.util.ts
-import { spawn } from "child_process";
-import { join } from "path";
-import { existsSync, mkdirSync } from "fs";
+import { spawn } from 'child_process';
 
-export async function runFFmpeg(args: string[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const ffmpeg = spawn("ffmpeg", args);
-
-    ffmpeg.stderr.on("data", (data) => {
-      console.log("FFmpeg:", data.toString());
-    });
-
-    ffmpeg.on("close", (code) => {
+export function runFfmpeg(args: string[]) {
+  return new Promise<void>((resolve, reject) => {
+    const ff = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stderr = '';
+    ff.stderr?.on('data', (d) => (stderr += d.toString()));
+    ff.on('close', (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`FFmpeg exited with code ${code}`));
+      else
+        reject(
+          new Error(
+            `❌ ffmpeg exited ${code}\nargs: ${args.join(' ')}\nstderr:\n${stderr}`,
+          ),
+        );
     });
   });
-}
-
-export function ensureDir(path: string) {
-  if (!existsSync(path)) mkdirSync(path, { recursive: true });
 }
