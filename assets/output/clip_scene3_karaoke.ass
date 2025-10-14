@@ -1,0 +1,29 @@
+[Script Info]
+Title: Clip_scene3_Karaoke
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+Collisions: Normal
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Highlight,Bebas Neue,60,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,6,2,10,10,40,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.30,Highlight,,0,0,0,,{\c&H000000FF}This{\c&H00FFFFFF} isn't just a yacht, it's your sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:00.30,0:00:00.58,Highlight,,0,0,0,,This {\c&H000000FF}isn't{\c&H00FFFFFF} just a yacht, it's your sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:00.58,0:00:00.82,Highlight,,0,0,0,,This isn't {\c&H000000FF}just{\c&H00FFFFFF} a yacht, it's your sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:00.82,0:00:01.02,Highlight,,0,0,0,,This isn't just {\c&H000000FF}a{\c&H00FFFFFF} yacht, it's your sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:01.02,0:00:01.30,Highlight,,0,0,0,,This isn't just a {\c&H000000FF}yacht,{\c&H00FFFFFF} it's your sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:01.30,0:00:01.66,Highlight,,0,0,0,,This isn't just a yacht, it's your sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:01.66,0:00:01.90,Highlight,,0,0,0,,This isn't just a yacht, {\c&H000000FF}it's{\c&H00FFFFFF} your sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:01.90,0:00:02.02,Highlight,,0,0,0,,This isn't just a yacht, it's {\c&H000000FF}your{\c&H00FFFFFF} sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:02.02,0:00:02.60,Highlight,,0,0,0,,This isn't just a yacht, it's your {\c&H000000FF}sanctuary,{\c&H00FFFFFF} designed for those who demand excellence.
+Dialogue: 0,0:00:02.60,0:00:02.96,Highlight,,0,0,0,,This isn't just a yacht, it's your sanctuary, designed for those who demand excellence.
+Dialogue: 0,0:00:02.96,0:00:03.40,Highlight,,0,0,0,,This isn't just a yacht, it's your sanctuary, {\c&H000000FF}designed{\c&H00FFFFFF} for those who demand excellence.
+Dialogue: 0,0:00:03.40,0:00:03.66,Highlight,,0,0,0,,This isn't just a yacht, it's your sanctuary, designed {\c&H000000FF}for{\c&H00FFFFFF} those who demand excellence.
+Dialogue: 0,0:00:03.66,0:00:03.90,Highlight,,0,0,0,,This isn't just a yacht, it's your sanctuary, designed for {\c&H000000FF}those{\c&H00FFFFFF} who demand excellence.
+Dialogue: 0,0:00:03.90,0:00:04.14,Highlight,,0,0,0,,This isn't just a yacht, it's your sanctuary, designed for those {\c&H000000FF}who{\c&H00FFFFFF} demand excellence.
+Dialogue: 0,0:00:04.14,0:00:04.56,Highlight,,0,0,0,,This isn't just a yacht, it's your sanctuary, designed for those who {\c&H000000FF}demand{\c&H00FFFFFF} excellence.
+Dialogue: 0,0:00:04.56,0:00:05.20,Highlight,,0,0,0,,This isn't just a yacht, it's your sanctuary, designed for those who demand {\c&H000000FF}excellence.{\c&H00FFFFFF}
