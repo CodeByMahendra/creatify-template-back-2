@@ -1,27 +1,3 @@
-// import { Controller, Post, Body } from '@nestjs/common';
-// import { VideoService } from './video.service';
-
-// @Controller('video')
-// export class VideoController {
-//   constructor(private readonly videoService: VideoService) {}
-
-//   @Post('render')
-//   async render(
-//     @Body()
-//     payload: {
-//       effectType: string;
-//       scenes: {
-//         chunk_id: string;
-//         image_filename: string;
-//         duration: number;
-//         direction?: string;
-//         overlayText?: string;
-//       }[];
-//     },
-//   ) {
-//     return this.videoService.buildVideo(payload.scenes, payload.effectType);
-//   }
-// }
 
 
 import { Controller, Post, Body } from '@nestjs/common';
@@ -44,7 +20,7 @@ interface ScenePayload {
   textStyle?: string;
   asset_type?: string;
   aspect_ratio?: string;
-  words?: WordTiming[]; // NEW: Word-level timing for karaoke effect
+  words?: WordTiming[]; 
   audio_duration?: number;
   match_confidence?: number;
 }
@@ -52,6 +28,7 @@ interface ScenePayload {
 interface RenderPayload {
   effectType: string;
   audio_url:string;
+  logo_url:string,
   scenes: ScenePayload[];
 }
 
@@ -61,7 +38,7 @@ export class VideoController {
 
   @Post('render')
   async render(@Body() payload: RenderPayload) {
-return this.videoService.buildVideo(payload.scenes, payload.effectType,payload.audio_url);
+return this.videoService.buildVideo(payload.scenes, payload.effectType,payload.audio_url,payload.logo_url);
   }
 }
 

@@ -1,5 +1,4 @@
 
-
 import * as path from 'path';
 import * as fs from 'fs';
 import sharp from 'sharp';
@@ -361,13 +360,14 @@ async function resizeLogoWithAspectRatio(
 }
 
 
-export async function simple_video_effect(
+
+export async function cycling_effects_video(
   scenes: any[],
   dirs: any,
   runFfmpeg: any,
   fps: number,
   templates: any,
-  templateName: string = 'basic',
+  templateName: string = 'card_motion',
   logoPath?: string
 ): Promise<string[]> {
   const clipPaths: string[] = [];
@@ -377,7 +377,7 @@ export async function simple_video_effect(
 
   console.log('\n====== ANALYZING IMAGES ======');
 
-  // Aspect ratio detection (same as before)
+  // Aspect ratio detection
   for (const scene of scenes) {
     if (scene.image_filename) {
       const imgPath = path.isAbsolute(scene.image_filename)
@@ -442,7 +442,20 @@ export async function simple_video_effect(
   const stylePattern = ['Default', 'Default', 'Highlight', 'Highlight', 'Highlight'];
   let styleIndex = 0;
 
-  console.log('====== PROCESSING SCENES (SIMPLE - NO EFFECTS) ======\n');
+  // Effect cycle pattern
+  const effectCycle = [
+    'zoom_in',      // 0
+    'zoom_out',     // 1
+    'wipe_left',    // 2
+    'white_box',    // 3
+    'zoom_out',     // 4
+    'zoom_out',     // 5
+    'wipe_right',   // 6
+    'white_box'     // 7
+  ];
+
+  console.log('====== PROCESSING SCENES WITH CYCLING EFFECTS ======');
+  console.log(`🔄 Effect cycle: ${effectCycle.join(' → ')}\n`);
 
   const totalExpectedDuration = scenes.length > 0 
     ? Math.max(...scenes.map(s => s.end_time || 0))
@@ -459,6 +472,10 @@ export async function simple_video_effect(
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
     const isLastClip = i === scenes.length - 1;
+    
+    // Get effect for this clip (cycle through pattern)
+    const effectIndex = i % effectCycle.length;
+    const currentEffect = effectCycle[effectIndex];
     
     const {
       chunk_id,
@@ -483,7 +500,7 @@ export async function simple_video_effect(
       gapAfter = nextStart - currentEnd;
       
       if (gapAfter > 0.01) {
-        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - Effect: ${currentEffect.toUpperCase()}`);
         console.log(`    Gap detected: ${gapAfter.toFixed(2)}s after this scene`);
         console.log(`    Original duration: ${audio_duration.toFixed(2)}s`);
         
@@ -491,15 +508,15 @@ export async function simple_video_effect(
         console.log(`    Extended duration: ${clipDuration.toFixed(2)}s (includes gap)`);
       } else {
         clipDuration = audio_duration || (end_time - start_time) || 0;
-        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - Effect: ${currentEffect.toUpperCase()}`);
         console.log(`    Duration: ${clipDuration.toFixed(2)}s (no gap)`);
       }
     } else {
       clipDuration = audio_duration || (end_time - start_time) || 0;
-      console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE`);
+      console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE (Blur + Logo)`);
       console.log(`    Duration: ${clipDuration.toFixed(2)}s`);
       if (logoPath) {
-        console.log(`    🏷️  Will show blur background + logo`);
+        console.log(`    🏷️  Will show blur background + logo + karaoke text`);
       }
     }
 
@@ -512,14 +529,13 @@ export async function simple_video_effect(
     console.log(`    Text: "${overlayText}"`);
     console.log(`    Words: ${words.length}`);
     console.log(`    Resolution: ${width}x${height}`);
-    console.log(`    Style: Simple (Direct Image Display)`);
 
     const textStyle = stylePattern[styleIndex];
     styleIndex = (styleIndex + 1) % stylePattern.length;
 
     let inputPath: string;
 
-    // Handle image/video input (same logic as before)
+    // Handle image/video input
     if (asset_type === 'video' && video_filename) {
       inputPath = path.isAbsolute(video_filename)
         ? video_filename
@@ -603,9 +619,9 @@ export async function simple_video_effect(
 
     let filterComplex = '';
 
-    // Last clip with logo: blur background + logo overlay + karaoke text
+    // Last clip: blur background + logo + karaoke
     if (isLastClip && logoPath && fs.existsSync(logoPath)) {
-      console.log(`    🎨 Last clip: Applying blur + logo + karaoke overlay`);
+      console.log(`    🎨 Applying: BLUR + LOGO overlay`);
       
       const resizedLogoPath = await resizeLogoWithAspectRatio(
         logoPath,
@@ -618,142 +634,134 @@ export async function simple_video_effect(
       if (resizedLogoPath && fs.existsSync(resizedLogoPath)) {
         args.push('-loop', '1', '-i', resizedLogoPath);
         
-        // Blur background + logo
+        // Blur + logo overlay
         filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]scale=w=min(iw\\,${Math.floor(width * 0.4)}):h=min(ih\\,${Math.floor(height * 0.4)}):force_original_aspect_ratio=decrease[logo];[blurred][logo]overlay=(W-w)/2:(H-h)/2[vbase]`;
         
-        console.log(`    ✅ Logo overlay configured`);
-        
-        // Add karaoke text on top of blur+logo
-        if (overlayText && words.length > 0) {
-          const sceneStart = typeof start_time === 'number' ? start_time : 0;
-          
-          const relativeWords = words.map((w: any) => {
-            const startAbs = typeof w.start === 'number' ? w.start : 0;
-            const endAbs = typeof w.end === 'number' ? w.end : startAbs;
-            
-            const relStart = Math.max(0, startAbs - sceneStart);
-            const relEnd = Math.max(0, endAbs - sceneStart);
-            
-            return {
-              word: w.word,
-              start: Math.min(relStart, audio_duration),
-              end: Math.min(relEnd, audio_duration),
-            };
-          });
-
-          console.log(`    🎵 Adding karaoke to last clip (${relativeWords.length} words)`);
-
-          const assFile = generateAssWithKaraoke(
-            dirs.assDir,
-            chunk_id,
-            overlayText,
-            audio_duration,
-            relativeWords,
-            templates,
-            templateName,
-            smallestAspectRatio,
-            textStyle
-          );
-          
-          filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-          
-        } else if (overlayText) {
-          console.log(`    📝 Adding static text to last clip`);
-          
-          const assFile = generateAssFromTemplate(
-            dirs.assDir,
-            chunk_id,
-            overlayText,
-            audio_duration || clipDuration,
-            templates,
-            templateName,
-            smallestAspectRatio,
-            textStyle
-          );
-          
-          filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-          
-        } else {
-          filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
-        }
+        console.log(`    ✅ Blur + Logo configured`);
       } else {
-        // Fallback: just scale the image with text
         filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[vbase]`;
-        
-        if (overlayText) {
-          const assFile = overlayText && words.length > 0
-            ? generateAssWithKaraoke(dirs.assDir, chunk_id, overlayText, audio_duration, words, templates, templateName, smallestAspectRatio, textStyle)
-            : generateAssFromTemplate(dirs.assDir, chunk_id, overlayText, audio_duration || clipDuration, templates, templateName, smallestAspectRatio, textStyle);
-          
-          filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-        } else {
-          filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
-        }
       }
     } 
-    // Regular clips: just show image with karaoke text
+    // Regular clips: apply cycling effects
     else {
-      // Simple scale and pad (no blur, no effects)
-      filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[vbase]`;
+      console.log(`    🎨 Applying effect: ${currentEffect.toUpperCase()}`);
       
-      // Add karaoke text overlay
-      if (overlayText && words.length > 0) {
-        const sceneStart = typeof start_time === 'number' ? start_time : 0;
-        
-        const relativeWords = words.map((w: any) => {
-          const startAbs = typeof w.start === 'number' ? w.start : 0;
-          const endAbs = typeof w.end === 'number' ? w.end : startAbs;
+      // Base: scale and pad image
+      let baseFilter = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+      
+      // Apply effect based on cycle
+      switch (currentEffect) {
+        case 'zoom_in': {
+          // Zoom in: scale from 1.0 to 1.2 over duration
+          // Use if() expression to avoid quotes: if(lt(t,D), 1+0.2*t/D, 1.2)
+          const totalFrames = Math.ceil(clipDuration * fps);
+          const zoomFactor = 0.2;
           
-          const relStart = Math.max(0, startAbs - sceneStart);
-          const relEnd = Math.max(0, endAbs - sceneStart);
-          
-          return {
-            word: w.word,
-            start: Math.min(relStart, audio_duration),
-            end: Math.min(relEnd, audio_duration),
-          };
-        });
-
-        console.log(`    🎵 Adding karaoke (${relativeWords.length} words)`);
-        
-        if (gapAfter > 0.01) {
-          console.log(`    ⏸️  Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
+          baseFilter += `,zoompan=z='if(lt(t,${clipDuration}), min(1.2, 1+${zoomFactor}*t/${clipDuration}), 1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${width}x${height}
+`;
+          console.log(`       📹 Zoom In (1.0 → 1.2)`);
+          break;
         }
-
-        const assFile = generateAssWithKaraoke(
-          dirs.assDir,
-          chunk_id,
-          overlayText,
-          audio_duration,
-          relativeWords,
-          templates,
-          templateName,
-          smallestAspectRatio,
-          textStyle
-        );
-        
-        filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-        
-      } else if (overlayText) {
-        console.log(`    📝 Adding static text overlay`);
-        
-        const assFile = generateAssFromTemplate(
-          dirs.assDir,
-          chunk_id,
-          overlayText,
-          audio_duration || clipDuration,
-          templates,
-          templateName,
-          smallestAspectRatio,
-          textStyle
-        );
-        
-        filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-        
-      } else {
-        // No text, just rename output
-        filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
+          
+        case 'zoom_out': {
+          // Zoom out: scale from 1.2 to 1.0 over duration
+          const totalFrames = Math.ceil(clipDuration * fps);
+          const zoomFactor = 0.2;
+          
+          baseFilter += `,zoompan=z='if(lt(t,${clipDuration}), min(1.2, 1+${zoomFactor}*t/${clipDuration}), 1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${width}x${height}
+`;
+          console.log(`       📹 Zoom Out (1.2 → 1.0)`);
+          break;
+        }
+          
+        case 'wipe_left': {
+          // Wipe from right to left
+          baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];[black][base]overlay=x='if(lt(t,${clipDuration}), W-W*t/${clipDuration}, 0)':y=0`;
+          console.log(`       🔄 Wipe Left (right → left)`);
+          break;
+        }
+          
+        case 'wipe_right': {
+          // Wipe from left to right
+          baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];[black][base]`;
+          console.log(`       🔄 Wipe Right (left → right)`);
+          break;
+        }
+          
+        case 'white_box': {
+          // Transparent white box (40% width, 100% height) in center
+          const boxWidth = Math.floor(width * 0.4);
+          const boxX = Math.floor((width - boxWidth) / 2);
+          baseFilter += `[base];color=white@0.3:s=${boxWidth}x${height}:d=${clipDuration}[box];[base][box]overlay='${boxX}:0'
+`;
+          console.log(`       ⬜ White Box (40% width, center, 30% opacity)`);
+          break;
+        }
+          
+        default:
+          // No effect, just base
+          break;
       }
+      
+      filterComplex = baseFilter + '[vbase]';
+    }
+
+    // Add karaoke text overlay for ALL clips
+    if (overlayText && words.length > 0) {
+      const sceneStart = typeof start_time === 'number' ? start_time : 0;
+      
+      const relativeWords = words.map((w: any) => {
+        const startAbs = typeof w.start === 'number' ? w.start : 0;
+        const endAbs = typeof w.end === 'number' ? w.end : startAbs;
+        
+        const relStart = Math.max(0, startAbs - sceneStart);
+        const relEnd = Math.max(0, endAbs - sceneStart);
+        
+        return {
+          word: w.word,
+          start: Math.min(relStart, audio_duration),
+          end: Math.min(relEnd, audio_duration),
+        };
+      });
+
+      console.log(`    🎵 Adding karaoke (${relativeWords.length} words)`);
+      
+      if (gapAfter > 0.01) {
+        console.log(`    ⏸️  Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
+      }
+
+      const assFile = generateAssWithKaraoke(
+        dirs.assDir,
+        chunk_id,
+        overlayText,
+        audio_duration,
+        relativeWords,
+        templates,
+        templateName,
+        smallestAspectRatio,
+        textStyle
+      );
+      
+      filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
+      
+    } else if (overlayText) {
+      console.log(`    📝 Adding static text`);
+      
+      const assFile = generateAssFromTemplate(
+        dirs.assDir,
+        chunk_id,
+        overlayText,
+        audio_duration || clipDuration,
+        templates,
+        templateName,
+        smallestAspectRatio,
+        textStyle
+      );
+      
+      filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
+      
+    } else {
+      filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
     }
 
     args.push(
@@ -770,7 +778,7 @@ export async function simple_video_effect(
       clipPath
     );
 
-    console.log(`    🎬 Running FFmpeg (simple mode)...`);
+    console.log(`    🎬 Running FFmpeg with ${currentEffect} effect...`);
     await runFfmpeg(args);
     console.log(`    ✅ Video clip created: ${clipPath}`);
   }
@@ -787,14 +795,14 @@ export async function simple_video_effect(
     return sum + dur;
   }, 0);
 
-  console.log(`\n🎉 All scenes processed (simple mode)!`);
+  console.log(`\n🎉 All scenes processed with cycling effects!`);
   console.log(`📊 Total clips created: ${clipPaths.length}`);
   console.log(`📊 Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
   console.log(`📊 Calculated duration: ${finalDuration.toFixed(2)}s`);
-  console.log(`🎴 Style: Direct image display (no card/blur effects)`);
-  console.log(`📝 Features: Karaoke text + Resized images`);
+  console.log(`🔄 Effect pattern: ${effectCycle.join(' → ')}`);
+  console.log(`📝 Features: Karaoke text on all clips`);
   if (logoPath) {
-    console.log(`🏷️  Last clip: Blur background + centered logo`);
+    console.log(`🏷️  Last clip: Blur background + centered logo + karaoke`);
   }
   console.log(`📁 Clips saved to: ${dirs.clipsDir}`);
   console.log(`📁 ASS files saved to: ${dirs.assDir}`);

@@ -1,154 +1,80 @@
 
-// import { Injectable } from '@nestjs/common';
-// import * as path from 'path';
-// import * as fs from 'fs';
-// import { runFfmpeg } from 'src/utils/ffmpeg.utils';
-// import { overlayTemplates } from 'src/utils/overlayStyles';
-// import { zoom_effectAd } from 'src/efffects';
-// import { saveSceneAssets, Scene } from 'src/utils/saveSceneImages';
-
-// @Injectable()
-// export class VideoService {
-//   assetsDir = path.join(process.cwd(), 'assets');
-//   imagesDir = path.join(this.assetsDir, 'images');
-//   audioDir = path.join(this.assetsDir, 'audio');
-//   videosDir = path.join(this.assetsDir, 'videos');
-//   outputDir = path.join(this.assetsDir, 'output');
-//   fps = 25;
-
-//   async buildVideo(scenes: Scene[], effectType?: string, audio_url?: string) {
-//     if (!fs.existsSync(this.outputDir)) {
-//       fs.mkdirSync(this.outputDir, { recursive: true });
-//     }
-
-//     // ----- Save assets locally -----
-//     const { updatedScenes: scenesWithAssets } = await saveSceneAssets(
-//       scenes,
-//       this.assetsDir,
-//       audio_url
-//     );
-
-//     const updatedScenes = scenesWithAssets.map(scene => ({
-//       ...scene,
-//       image_filename: scene.image_filename || null,
-//       audio_filename: scene.audio_filename || null,
-//       // video_filename: scene.video_filename || null,
-//     }));
-
-//     // Debug log
-//     updatedScenes.forEach((s, idx) => {
-//       console.log(`Scene ${idx + 1}: image = ${s.image_filename}, audio = ${s.audio_filename}`);
-//     });
-
-//     let clipPaths: string[] = [];
-//     const chosenEffect = effectType || 'zoom_efffect';
-
-//     switch (chosenEffect) {
-//       case 'zoom_efffect':
-//         clipPaths = await zoom_effectAd(
-//           updatedScenes,
-//           {
-//             imagesDir: this.imagesDir,
-//             videosDir: this.videosDir,
-//             outputDir: this.outputDir,
-//           },
-//           runFfmpeg,
-//           this.fps,
-//           overlayTemplates,
-//           'zoom_effect'
-//         );
-//         break;
-
-//       default:
-//         throw new Error(`Unknown effect type: ${chosenEffect}`);
-//     }
-
-//     // ----- Merge clips -----
-//     const listFile = path.join(this.outputDir, 'concat_list.txt');
-//     fs.writeFileSync(
-//       listFile,
-//       clipPaths.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n')
-//     );
-
-//     const finalPath = path.join(this.outputDir, `final_${chosenEffect}.mp4`);
-//     await runFfmpeg(['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-c', 'copy', finalPath]);
-
-//     fs.unlinkSync(listFile);
-
-//     console.log('✅ Video generated at:', finalPath);
-
-//     return {
-//       chosenEffect,
-//       finalVideo: finalPath,
-//     };
-//   }
-// }
-
-
-// ✅ FIXED: video.service.ts - Proper error handling and worker management
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Worker } from 'worker_threads';
 import { Scene } from 'src/utils/saveSceneImages';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class VideoService {
-  assetsDir = path.join(process.cwd(), 'assets');
-  imagesDir = path.join(this.assetsDir, 'images');
-  audioDir = path.join(this.assetsDir, 'audio');
-  videosDir = path.join(this.assetsDir, 'videos');
-  outputDir = path.join(this.assetsDir, 'output');
+  rootTempDir = path.join(process.cwd(), 'temp');
   fps = 25;
 
   constructor() {
-    // Create directories if they don't exist
-    this.ensureDirectories();
+    this.ensureRootTempDir();
   }
 
-  private ensureDirectories() {
-    const dirs = [
-      this.assetsDir,
-      this.imagesDir,
-      this.audioDir,
-      this.videosDir,
-      this.outputDir,
-    ];
+  private ensureRootTempDir() {
+    if (!fs.existsSync(this.rootTempDir)) {
+      fs.mkdirSync(this.rootTempDir, { recursive: true });
+      console.log(`✅ Created root temp directory: ${this.rootTempDir}`);
+    }
+  }
 
-    for (const dir of dirs) {
+  private createRequestDirs(requestId: string) {
+    const requestDir = path.join(this.rootTempDir, requestId);
+    const assetsDir = path.join(requestDir, 'assets');
+    
+    const dirs = {
+      requestDir,
+      assetsDir,
+      imagesDir: path.join(assetsDir, 'images'),
+      audioDir: path.join(assetsDir, 'audio'),
+      videosDir: path.join(assetsDir, 'videos'),
+      logoDir: path.join(assetsDir, 'logo'),
+      clipsDir: path.join(assetsDir, 'clips'),
+      assDir: path.join(assetsDir, 'ass'),
+      resizedDir: path.join(assetsDir, 'resized'),
+      tempDir: path.join(assetsDir, 'temp'),
+      outputDir: path.join(requestDir, 'output'),
+    };
+
+    // Create all directories
+    console.log(`\n📁 Creating directories for request: ${requestId}`);
+    for (const [key, dir] of Object.entries(dirs)) {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
-        console.log(`✅ Created directory: ${dir}`);
+        console.log(`   ✅ ${key}: ${dir}`);
       }
     }
+
+    return dirs;
   }
 
   async buildVideo(
     scenes: Scene[],
     effectType?: string,
-    audio_url?: string
+    audio_url?: string,
+    logo_url?: string
   ): Promise<{
     success: boolean;
+    requestId: string;
     finalVideo?: string;
     error?: string;
     stats?: any;
   }> {
-    // Validate input
     if (!scenes || scenes.length === 0) {
       throw new BadRequestException('Scenes array is required and cannot be empty');
     }
 
-   
-   
+    const requestId = uuidv4();
+    console.log(`\n🆔 Processing request: ${requestId}`);
 
-    // Ensure output directory exists
-    if (!fs.existsSync(this.outputDir)) {
-      fs.mkdirSync(this.outputDir, { recursive: true });
-    }
+    const dirs = this.createRequestDirs(requestId);
 
     return new Promise((resolve, reject) => {
       try {
-        // Get worker file path
         const workerPath = path.resolve(__dirname, 'video-worker.js');
         
         if (!fs.existsSync(workerPath)) {
@@ -157,29 +83,23 @@ export class VideoService {
 
         console.log(`🔧 Starting worker: ${workerPath}\n`);
 
-        // Create worker with data
         const worker = new Worker(workerPath, {
           workerData: {
+            requestId,
             scenes,
             effectType: effectType || 'zoom_effect',
             audio_url,
+            logo_url,
             fps: this.fps,
-            dirs: {
-              assetsDir: this.assetsDir,
-              imagesDir: this.imagesDir,
-              videosDir: this.videosDir,
-              outputDir: this.outputDir,
-            },
+            dirs,
           },
         });
 
-        // Set timeout for worker (30 minutes max)
         const timeout = setTimeout(() => {
           worker.terminate();
           reject(new Error('Video processing timeout (30 minutes exceeded)'));
         }, 30 * 60 * 1000);
 
-        // Handle worker messages
         worker.on('message', (result) => {
           clearTimeout(timeout);
           console.log('\n✅ Worker completed successfully\n');
@@ -187,18 +107,20 @@ export class VideoService {
           if (result.error) {
             reject(new Error(result.error));
           } else {
-            resolve(result);
+            resolve({
+              ...result,
+              success: true,
+              requestId,
+            });
           }
         });
 
-        // Handle worker errors
         worker.on('error', (err) => {
           clearTimeout(timeout);
           console.error('\n❌ Worker error:', err);
           reject(err);
         });
 
-        // Handle worker exit
         worker.on('exit', (code) => {
           clearTimeout(timeout);
           
@@ -212,7 +134,6 @@ export class VideoService {
     });
   }
 
-  // Helper method to validate video file
   async validateVideoFile(filePath: string): Promise<boolean> {
     try {
       if (!fs.existsSync(filePath)) {
@@ -236,53 +157,70 @@ export class VideoService {
     }
   }
 
-  // Helper method to get output videos
-  async getOutputVideos(): Promise<string[]> {
+  async getOutputVideo(requestId: string): Promise<string | null> {
     try {
-      if (!fs.existsSync(this.outputDir)) {
-        return [];
+      const outputDir = path.join(this.rootTempDir, requestId, 'output');
+      
+      if (!fs.existsSync(outputDir)) {
+        return null;
       }
 
-      const files = fs.readdirSync(this.outputDir);
-      return files
-        .filter(f => f.startsWith('final_') && f.endsWith('.mp4'))
-        .map(f => path.join(this.outputDir, f));
+      const files = fs.readdirSync(outputDir);
+      const videoFile = files.find(f => f.startsWith('final_') && f.endsWith('.mp4'));
+      
+      return videoFile ? path.join(outputDir, videoFile) : null;
     } catch (error) {
-      console.error('Error getting output videos:', error);
-      return [];
+      console.error('Error getting output video:', error);
+      return null;
     }
   }
 
-  // Helper method to cleanup old files
+  async cleanupRequest(requestId: string): Promise<boolean> {
+    try {
+      const requestDir = path.join(this.rootTempDir, requestId);
+      
+      if (!fs.existsSync(requestDir)) {
+        console.warn(`⚠️ Request directory not found: ${requestId}`);
+        return false;
+      }
+
+      fs.rmSync(requestDir, { recursive: true, force: true });
+      console.log(`🧹 Cleaned up request: ${requestId}`);
+      return true;
+    } catch (error) {
+      console.error('Error cleaning up request:', error);
+      return false;
+    }
+  }
+
   async cleanupOldFiles(ageInHours: number = 24): Promise<number> {
     try {
+      if (!fs.existsSync(this.rootTempDir)) {
+        return 0;
+      }
+
       const now = Date.now();
       const ageMs = ageInHours * 60 * 60 * 1000;
       let deletedCount = 0;
 
-      const dirs = [this.outputDir, this.imagesDir];
+      const requestDirs = fs.readdirSync(this.rootTempDir);
 
-      for (const dir of dirs) {
-        if (!fs.existsSync(dir)) continue;
+      for (const requestId of requestDirs) {
+        const requestDir = path.join(this.rootTempDir, requestId);
+        const stats = fs.statSync(requestDir);
 
-        const files = fs.readdirSync(dir);
-        for (const file of files) {
-          const filePath = path.join(dir, file);
-          const stats = fs.statSync(filePath);
-
-          if (now - stats.mtimeMs > ageMs) {
-            fs.unlinkSync(filePath);
-            deletedCount++;
-          }
+        if (now - stats.mtimeMs > ageMs) {
+          fs.rmSync(requestDir, { recursive: true, force: true });
+          deletedCount++;
+          console.log(`🧹 Deleted old request: ${requestId}`);
         }
       }
 
-      console.log(`🧹 Cleaned up ${deletedCount} old files`);
+      console.log(`🧹 Cleaned up ${deletedCount} old request folders`);
       return deletedCount;
     } catch (error) {
-      console.error('Error cleaning up files:', error);
+      console.error('Error cleaning up old files:', error);
       return 0;
     }
   }
 }
-

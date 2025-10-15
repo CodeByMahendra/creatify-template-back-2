@@ -1,5 +1,4 @@
 
-
 import * as path from 'path';
 import * as fs from 'fs';
 import sharp from 'sharp';
@@ -360,14 +359,68 @@ async function resizeLogoWithAspectRatio(
   }
 }
 
+// Create rounded card image using Sharp with increased corner radius
+async function createRoundedCard(
+  inputPath: string,
+  width: number,
+  height: number,
+  cornerRadius: number,
+  outputPath: string
+): Promise<void> {
+  const cardWidth = Math.floor(width * 0.75);
+  const cardHeight = Math.floor(height * 0.75);
 
-export async function simple_video_effect(
+  // Create SVG for rounded rectangle mask
+  const roundedRectSVG = `
+    <svg width="${cardWidth}" height="${cardHeight}">
+      <rect x="0" y="0" width="${cardWidth}" height="${cardHeight}" 
+            rx="${cornerRadius}" ry="${cornerRadius}" fill="white"/>
+    </svg>
+  `;
+
+  // Resize image to card size and apply rounded corners
+  await sharp(inputPath)
+    .resize(cardWidth, cardHeight, {
+      fit: 'cover',
+      position: 'center',
+    })
+    .composite([{
+      input: Buffer.from(roundedRectSVG),
+      blend: 'dest-in'
+    }])
+    .png()
+    .toFile(outputPath);
+}
+
+// Generate card motion filter string for FFmpeg
+function generateCardMotionFilter(
+  duration: number, 
+  width: number, 
+  height: number,
+  cardWidth: number,
+  cardHeight: number
+): string {
+  const slideInDuration = Math.min(0.5, duration * 0.15);
+  const disappearTime = duration - 0.05;
+  
+  const startX = -cardWidth;
+  const centerX = (width - cardWidth) / 2;
+  const centerY = (height - cardHeight) / 2;
+  
+  // X position expression: slide in from left to center
+  const xExpr = `if(lt(t,${slideInDuration}),${startX}+((${centerX})-(${startX}))*t/${slideInDuration},${centerX})`;
+  
+  // Complete overlay filter string with enable parameter
+  return `x='${xExpr}':y=${centerY}:enable='between(t,0,${disappearTime})'`;
+}
+
+export async function card_motion_effectAd(
   scenes: any[],
   dirs: any,
   runFfmpeg: any,
   fps: number,
   templates: any,
-  templateName: string = 'basic',
+  templateName: string = 'card_motion',
   logoPath?: string
 ): Promise<string[]> {
   const clipPaths: string[] = [];
@@ -375,9 +428,8 @@ export async function simple_video_effect(
   let smallestArea = Infinity;
   let smallestAspectRatio = '16:9';
 
-  console.log('\n====== ANALYZING IMAGES ======');
+  console.log('\n= ANALYZING IMAGES ======');
 
-  // Aspect ratio detection (same as before)
   for (const scene of scenes) {
     if (scene.image_filename) {
       const imgPath = path.isAbsolute(scene.image_filename)
@@ -442,7 +494,7 @@ export async function simple_video_effect(
   const stylePattern = ['Default', 'Default', 'Highlight', 'Highlight', 'Highlight'];
   let styleIndex = 0;
 
-  console.log('====== PROCESSING SCENES (SIMPLE - NO EFFECTS) ======\n');
+  console.log('====== PROCESSING SCENES WITH CARD MOTION EFFECT ======\n');
 
   const totalExpectedDuration = scenes.length > 0 
     ? Math.max(...scenes.map(s => s.end_time || 0))
@@ -455,6 +507,9 @@ export async function simple_video_effect(
   console.log(` Gap duration: ${(totalExpectedDuration - totalAudioDuration).toFixed(2)}s\n`);
 
   const { width, height } = getDimensionsFromAspectRatio(smallestAspectRatio);
+  const cardWidth = Math.floor(width * 0.75);
+  const cardHeight = Math.floor(height * 0.75);
+  const cornerRadius = 50;
 
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
@@ -499,7 +554,7 @@ export async function simple_video_effect(
       console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE`);
       console.log(`    Duration: ${clipDuration.toFixed(2)}s`);
       if (logoPath) {
-        console.log(`    🏷️  Will show blur background + logo`);
+        console.log(`    🏷️  Will show blur background + logo + karaoke text (no card)`);
       }
     }
 
@@ -512,23 +567,25 @@ export async function simple_video_effect(
     console.log(`    Text: "${overlayText}"`);
     console.log(`    Words: ${words.length}`);
     console.log(`    Resolution: ${width}x${height}`);
-    console.log(`    Style: Simple (Direct Image Display)`);
+    console.log(`    Card size: ${cardWidth}x${cardHeight}`);
+    console.log(`    Corner radius: ${cornerRadius}px`);
+    console.log(`    Effect: Card slides in from left → instant disappear from center`);
 
     const textStyle = stylePattern[styleIndex];
     styleIndex = (styleIndex + 1) % stylePattern.length;
+    console.log(`    Style: ${textStyle}`);
 
     let inputPath: string;
 
-    // Handle image/video input (same logic as before)
     if (asset_type === 'video' && video_filename) {
       inputPath = path.isAbsolute(video_filename)
         ? video_filename
         : path.join(dirs.imagesDir, video_filename);
-      console.log(`    📹 Video asset`);
+      console.log(`    Video asset`);
     } else if (image_filename) {
       if (image_filename.startsWith('http')) {
         try {
-          console.log(`    📥 Downloading image...`);
+          console.log(`    Downloading image...`);
           const response = await axios.get(image_filename, {
             responseType: 'arraybuffer',
           });
@@ -536,9 +593,9 @@ export async function simple_video_effect(
           const tempPath = path.join(dirs.tempDir, `downloaded_${chunk_id}.jpg`);
           fs.writeFileSync(tempPath, buffer);
           inputPath = tempPath;
-          console.log(`    ✅ Downloaded (${buffer.length} bytes)`);
+          console.log(`    Downloaded (${buffer.length} bytes)`);
         } catch (err) {
-          console.warn(`    ⚠️  Download failed, using black frame`);
+          console.warn(`    Download failed`);
           const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
           if (!fs.existsSync(blackPath)) {
             await sharp(createBlackFrame(width, height), {
@@ -555,9 +612,8 @@ export async function simple_video_effect(
           : path.join(dirs.imagesDir, image_filename);
       }
 
-      // Resize image to fit canvas
       if (fs.existsSync(inputPath)) {
-        console.log(`    🔧 Resizing image to ${width}x${height}...`);
+        console.log(`    🔧 Preparing image for card effect...`);
         const resizedBuffer = await loadAndResizeImage(inputPath, width, height);
         const resizedPath = path.join(dirs.resizedDir, `resized_${chunk_id}.jpg`);
         
@@ -571,7 +627,7 @@ export async function simple_video_effect(
           .jpeg()
           .toFile(resizedPath);
         inputPath = resizedPath;
-        console.log(`    ✅ Image resized: ${resizedPath}`);
+        console.log(`    ✅ Image prepared: ${resizedPath}`);
       }
     } else {
       console.log(`    ⚫ Creating black frame`);
@@ -603,9 +659,9 @@ export async function simple_video_effect(
 
     let filterComplex = '';
 
-    // Last clip with logo: blur background + logo overlay + karaoke text
+    // For last clip with logo: show blur background + logo + karaoke text (no card)
     if (isLastClip && logoPath && fs.existsSync(logoPath)) {
-      console.log(`    🎨 Last clip: Applying blur + logo + karaoke overlay`);
+      console.log(`    🎨 Last clip: Creating blur background + logo + karaoke text`);
       
       const resizedLogoPath = await resizeLogoWithAspectRatio(
         logoPath,
@@ -618,142 +674,85 @@ export async function simple_video_effect(
       if (resizedLogoPath && fs.existsSync(resizedLogoPath)) {
         args.push('-loop', '1', '-i', resizedLogoPath);
         
-        // Blur background + logo
+        // Blur background + logo (base layer for text overlay)
         filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]scale=w=min(iw\\,${Math.floor(width * 0.4)}):h=min(ih\\,${Math.floor(height * 0.4)}):force_original_aspect_ratio=decrease[logo];[blurred][logo]overlay=(W-w)/2:(H-h)/2[vbase]`;
         
-        console.log(`    ✅ Logo overlay configured`);
-        
-        // Add karaoke text on top of blur+logo
-        if (overlayText && words.length > 0) {
-          const sceneStart = typeof start_time === 'number' ? start_time : 0;
-          
-          const relativeWords = words.map((w: any) => {
-            const startAbs = typeof w.start === 'number' ? w.start : 0;
-            const endAbs = typeof w.end === 'number' ? w.end : startAbs;
-            
-            const relStart = Math.max(0, startAbs - sceneStart);
-            const relEnd = Math.max(0, endAbs - sceneStart);
-            
-            return {
-              word: w.word,
-              start: Math.min(relStart, audio_duration),
-              end: Math.min(relEnd, audio_duration),
-            };
-          });
-
-          console.log(`    🎵 Adding karaoke to last clip (${relativeWords.length} words)`);
-
-          const assFile = generateAssWithKaraoke(
-            dirs.assDir,
-            chunk_id,
-            overlayText,
-            audio_duration,
-            relativeWords,
-            templates,
-            templateName,
-            smallestAspectRatio,
-            textStyle
-          );
-          
-          filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-          
-        } else if (overlayText) {
-          console.log(`    📝 Adding static text to last clip`);
-          
-          const assFile = generateAssFromTemplate(
-            dirs.assDir,
-            chunk_id,
-            overlayText,
-            audio_duration || clipDuration,
-            templates,
-            templateName,
-            smallestAspectRatio,
-            textStyle
-          );
-          
-          filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-          
-        } else {
-          filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
-        }
-      } else {
-        // Fallback: just scale the image with text
-        filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[vbase]`;
-        
-        if (overlayText) {
-          const assFile = overlayText && words.length > 0
-            ? generateAssWithKaraoke(dirs.assDir, chunk_id, overlayText, audio_duration, words, templates, templateName, smallestAspectRatio, textStyle)
-            : generateAssFromTemplate(dirs.assDir, chunk_id, overlayText, audio_duration || clipDuration, templates, templateName, smallestAspectRatio, textStyle);
-          
-          filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-        } else {
-          filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
-        }
+        console.log(`    ✅ Logo overlay added to blur background`);
       }
     } 
-    // Regular clips: just show image with karaoke text
+    // For other clips: show card with motion
     else {
-      // Simple scale and pad (no blur, no effects)
-      filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[vbase]`;
+      // Create rounded card image
+      const cardPath = path.join(dirs.resizedDir, `card_${chunk_id}.png`)
+      console.log(`    🎴 Creating rounded card with ${cornerRadius}px corners...`);
+      await createRoundedCard(inputPath, width, height, cornerRadius, cardPath);
+      console.log(`    ✅ Rounded card created`);
+
+      args.push('-loop', '1', '-i',cardPath)
+
+      const xExpr = generateCardMotionFilter(clipDuration, width, height, cardWidth, cardHeight);
       
-      // Add karaoke text overlay
-      if (overlayText && words.length > 0) {
-        const sceneStart = typeof start_time === 'number' ? start_time : 0;
-        
-        const relativeWords = words.map((w: any) => {
-          const startAbs = typeof w.start === 'number' ? w.start : 0;
-          const endAbs = typeof w.end === 'number' ? w.end : startAbs;
-          
-          const relStart = Math.max(0, startAbs - sceneStart);
-          const relEnd = Math.max(0, endAbs - sceneStart);
-          
-          return {
-            word: w.word,
-            start: Math.min(relStart, audio_duration),
-            end: Math.min(relEnd, audio_duration),
-          };
-        });
+      // Blur background + card with instant disappear effect
+      filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]format=rgba[card];[blurred][card]overlay=${xExpr}[vbase]`;
+    }
 
-        console.log(`    🎵 Adding karaoke (${relativeWords.length} words)`);
+    // Add text overlay with karaoke for ALL clips (including last clip with logo)
+    if (overlayText && words.length > 0) {
+      const sceneStart = typeof start_time === 'number' ? start_time : 0;
+      
+      const relativeWords = words.map((w: any) => {
+        const startAbs = typeof w.start === 'number' ? w.start : 0;
+        const endAbs = typeof w.end === 'number' ? w.end : startAbs;
         
-        if (gapAfter > 0.01) {
-          console.log(`    ⏸️  Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
-        }
+        const relStart = Math.max(0, startAbs - sceneStart);
+        const relEnd = Math.max(0, endAbs - sceneStart);
+        
+        return {
+          word: w.word,
+          start: Math.min(relStart, audio_duration),
+          end: Math.min(relEnd, audio_duration),
+        };
+      });
 
-        const assFile = generateAssWithKaraoke(
-          dirs.assDir,
-          chunk_id,
-          overlayText,
-          audio_duration,
-          relativeWords,
-          templates,
-          templateName,
-          smallestAspectRatio,
-          textStyle
-        );
-        
-        filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-        
-      } else if (overlayText) {
-        console.log(`    📝 Adding static text overlay`);
-        
-        const assFile = generateAssFromTemplate(
-          dirs.assDir,
-          chunk_id,
-          overlayText,
-          audio_duration || clipDuration,
-          templates,
-          templateName,
-          smallestAspectRatio,
-          textStyle
-        );
-        
-        filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
-        
-      } else {
-        // No text, just rename output
-        filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
+      console.log(`    🎵 Karaoke timings (5-6 words chunks):`);
+      relativeWords.forEach((w: any, idx: number) => {
+        console.log(`       ${idx + 1}. "${w.word}" → ${w.start.toFixed(2)}s to ${w.end.toFixed(2)}s`);
+      });
+      
+      if (gapAfter > 0.01) {
+        console.log(`    ⏸️  Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
       }
+
+      const assFile = generateAssWithKaraoke(
+        dirs.assDir,
+        chunk_id,
+        overlayText,
+        audio_duration,
+        relativeWords,
+        templates,
+        templateName,
+        smallestAspectRatio,
+        textStyle
+      );
+      
+      filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
+      
+    } else if (overlayText) {
+      const assFile = generateAssFromTemplate(
+        dirs.assDir,
+        chunk_id,
+        overlayText,
+        audio_duration || clipDuration,
+        templates,
+        templateName,
+        smallestAspectRatio,
+        textStyle
+      );
+      
+      filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
+      
+    } else {
+      filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
     }
 
     args.push(
@@ -770,7 +769,7 @@ export async function simple_video_effect(
       clipPath
     );
 
-    console.log(`    🎬 Running FFmpeg (simple mode)...`);
+    console.log(`    🎬 Running FFmpeg with updated card motion effect...`);
     await runFfmpeg(args);
     console.log(`    ✅ Video clip created: ${clipPath}`);
   }
@@ -787,14 +786,16 @@ export async function simple_video_effect(
     return sum + dur;
   }, 0);
 
-  console.log(`\n🎉 All scenes processed (simple mode)!`);
+  console.log(`\n🎉 All scenes processed with updated card motion effect!`);
   console.log(`📊 Total clips created: ${clipPaths.length}`);
   console.log(`📊 Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
   console.log(`📊 Calculated duration: ${finalDuration.toFixed(2)}s`);
-  console.log(`🎴 Style: Direct image display (no card/blur effects)`);
-  console.log(`📝 Features: Karaoke text + Resized images`);
+  console.log(`🎴 Effect: Blur background + 75% card with ${cornerRadius}px rounded corners`);
+  console.log(`🎬 Animation: Slide in from left → Instant disappear from center`);
   if (logoPath) {
-    console.log(`🏷️  Last clip: Blur background + centered logo`);
+    console.log(`🏷️  Last clip: Blur background + logo + karaoke text (no card)`);
+  } else {
+    console.log(`🏷️  No logo: All clips show card with animation`);
   }
   console.log(`📁 Clips saved to: ${dirs.clipsDir}`);
   console.log(`📁 ASS files saved to: ${dirs.assDir}`);
@@ -802,3 +803,395 @@ export async function simple_video_effect(
   
   return clipPaths;
 }
+
+// export async function card_motion_effectAd(
+//   scenes: any[],
+//   dirs: any,
+//   runFfmpeg: any,
+//   fps: number,
+//   templates: any,
+//   templateName: string = 'card_motion',
+//   logoPath?: string
+// ): Promise<string[]> {
+//   const clipPaths: string[] = [];
+
+//   let smallestArea = Infinity;
+//   let smallestAspectRatio = '16:9';
+
+//   console.log('\n= ANALYZING IMAGES ======');
+
+//   for (const scene of scenes) {
+//     if (scene.image_filename) {
+//       const imgPath = path.isAbsolute(scene.image_filename)
+//         ? scene.image_filename
+//         : path.join(dirs.imagesDir, scene.image_filename);
+
+//       if (scene.image_filename.startsWith('http')) {
+//         try {
+//           console.log(` Analyzing: ${scene.chunk_id}`);
+//           const response = await axios.get(scene.image_filename, {
+//             responseType: 'arraybuffer',
+//           });
+//           const buffer = Buffer.from(response.data);
+//           const metadata = await sharp(buffer).metadata();
+
+//           if (metadata.width && metadata.height) {
+//             const area = metadata.width * metadata.height;
+//             console.log(`   Size: ${metadata.width}x${metadata.height} (${area} px²)`);
+
+//             if (area < smallestArea) {
+//               smallestArea = area;
+//               const ratio = metadata.width / metadata.height;
+//               if (Math.abs(ratio - 16 / 9) < 0.01) smallestAspectRatio = '16:9';
+//               else if (Math.abs(ratio - 9 / 16) < 0.01) smallestAspectRatio = '9:16';
+//               else if (Math.abs(ratio - 1) < 0.01) smallestAspectRatio = '1:1';
+//               else if (Math.abs(ratio - 4 / 5) < 0.01) smallestAspectRatio = '4:5';
+//               else if (Math.abs(ratio - 4 / 3) < 0.01) smallestAspectRatio = '4:3';
+//             }
+//           }
+//         } catch (err) {
+//           console.warn(`    Failed to fetch: ${scene.chunk_id}`);
+//         }
+//       } else if (fs.existsSync(imgPath)) {
+//         try {
+//           console.log(` Analyzing: ${scene.chunk_id}`);
+//           const metadata = await sharp(imgPath).metadata();
+
+//           if (metadata.width && metadata.height) {
+//             const area = metadata.width * metadata.height;
+//             console.log(`   Size: ${metadata.width}x${metadata.height} (${area} px²)`);
+
+//             if (area < smallestArea) {
+//               smallestArea = area;
+//               const ratio = metadata.width / metadata.height;
+//               if (Math.abs(ratio - 16 / 9) < 0.01) smallestAspectRatio = '16:9';
+//               else if (Math.abs(ratio - 9 / 16) < 0.01) smallestAspectRatio = '9:16';
+//               else if (Math.abs(ratio - 1) < 0.01) smallestAspectRatio = '1:1';
+//               else if (Math.abs(ratio - 4 / 5) < 0.01) smallestAspectRatio = '4:5';
+//               else if (Math.abs(ratio - 4 / 3) < 0.01) smallestAspectRatio = '4:3';
+//             }
+//           }
+//         } catch (err) {
+//           console.warn(`    Failed to analyze: ${scene.chunk_id}`);
+//         }
+//       }
+//     }
+//   }
+
+//   console.log(`\n✅ Aspect ratio selected: ${smallestAspectRatio}`);
+//   console.log(`🏷️  Logo provided: ${logoPath ? 'Yes' : 'No'}\n`);
+
+//   const stylePattern = ['Default', 'Default', 'Highlight', 'Highlight', 'Highlight'];
+//   let styleIndex = 0;
+
+//   console.log('====== PROCESSING SCENES WITH CARD MOTION EFFECT ======\n');
+
+//   const totalExpectedDuration = scenes.length > 0 
+//     ? Math.max(...scenes.map(s => s.end_time || 0))
+//     : 0;
+  
+//   const totalAudioDuration = scenes.reduce((sum, s) => sum + (s.audio_duration || 0), 0);
+  
+//   console.log(`Expected total timeline: ${totalExpectedDuration.toFixed(2)}s`);
+//   console.log(` Total audio duration: ${totalAudioDuration.toFixed(2)}s`);
+//   console.log(` Gap duration: ${(totalExpectedDuration - totalAudioDuration).toFixed(2)}s\n`);
+
+//   const { width, height } = getDimensionsFromAspectRatio(smallestAspectRatio);
+//   const cardWidth = Math.floor(width * 0.75);
+//   const cardHeight = Math.floor(height * 0.75);
+//   const cornerRadius = 50;
+
+//   for (let i = 0; i < scenes.length; i++) {
+//     const scene = scenes[i];
+//     const isLastClip = i === scenes.length - 1;
+    
+//     const {
+//       chunk_id,
+//       image_filename,
+//       video_filename,
+//       overlayText,
+//       asset_type = 'image',
+//       words = [],
+//       start_time,
+//       end_time,
+//       audio_duration,
+//     } = scene;
+
+//     let clipDuration: number;
+//     let gapAfter = 0;
+    
+//     if (i < scenes.length - 1) {
+//       const nextScene = scenes[i + 1];
+//       const currentEnd = end_time;
+//       const nextStart = nextScene.start_time;
+      
+//       gapAfter = nextStart - currentEnd;
+      
+//       if (gapAfter > 0.01) {
+//         console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+//         console.log(`    Gap detected: ${gapAfter.toFixed(2)}s after this scene`);
+//         console.log(`    Original duration: ${audio_duration.toFixed(2)}s`);
+        
+//         clipDuration = audio_duration + gapAfter;
+//         console.log(`    Extended duration: ${clipDuration.toFixed(2)}s (includes gap)`);
+//       } else {
+//         clipDuration = audio_duration || (end_time - start_time) || 0;
+//         console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+//         console.log(`    Duration: ${clipDuration.toFixed(2)}s (no gap)`);
+//       }
+//     } else {
+//       clipDuration = audio_duration || (end_time - start_time) || 0;
+//       console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE`);
+//       console.log(`    Duration: ${clipDuration.toFixed(2)}s`);
+//       if (logoPath) {
+//         console.log(`    🏷️  Will show only blur background + logo (no card)`);
+//       }
+//     }
+
+//     if (clipDuration <= 0) {
+//       console.warn(` Scene ${chunk_id} has invalid duration (${clipDuration}s), skipping...`);
+//       continue;
+//     }
+
+//     console.log(`    Timeline: ${start_time.toFixed(2)}s → ${end_time.toFixed(2)}s`);
+//     console.log(`    Text: "${overlayText}"`);
+//     console.log(`    Words: ${words.length}`);
+//     console.log(`    Resolution: ${width}x${height}`);
+//     console.log(`    Card size: ${cardWidth}x${cardHeight}`);
+//     console.log(`    Corner radius: ${cornerRadius}px`);
+//     console.log(`    Effect: Card slides in from left → instant disappear from center`);
+
+//     const textStyle = stylePattern[styleIndex];
+//     styleIndex = (styleIndex + 1) % stylePattern.length;
+//     console.log(`    Style: ${textStyle}`);
+
+//     let inputPath: string;
+
+//     if (asset_type === 'video' && video_filename) {
+//       inputPath = path.isAbsolute(video_filename)
+//         ? video_filename
+//         : path.join(dirs.imagesDir, video_filename);
+//       console.log(`    Video asset`);
+//     } else if (image_filename) {
+//       if (image_filename.startsWith('http')) {
+//         try {
+//           console.log(`    Downloading image...`);
+//           const response = await axios.get(image_filename, {
+//             responseType: 'arraybuffer',
+//           });
+//           const buffer = Buffer.from(response.data);
+//           const tempPath = path.join(dirs.tempDir, `downloaded_${chunk_id}.jpg`);
+//           fs.writeFileSync(tempPath, buffer);
+//           inputPath = tempPath;
+//           console.log(`    Downloaded (${buffer.length} bytes)`);
+//         } catch (err) {
+//           console.warn(`    Download failed`);
+//           const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
+//           if (!fs.existsSync(blackPath)) {
+//             await sharp(createBlackFrame(width, height), {
+//               raw: { width, height, channels: 3 },
+//             })
+//               .png()
+//               .toFile(blackPath);
+//           }
+//           inputPath = blackPath;
+//         }
+//       } else {
+//         inputPath = path.isAbsolute(image_filename)
+//           ? image_filename
+//           : path.join(dirs.imagesDir, image_filename);
+//       }
+
+//       if (fs.existsSync(inputPath)) {
+//         console.log(`    🔧 Preparing image for card effect...`);
+//         const resizedBuffer = await loadAndResizeImage(inputPath, width, height);
+//         const resizedPath = path.join(dirs.resizedDir, `resized_${chunk_id}.jpg`);
+        
+//         if (!fs.existsSync(dirs.resizedDir)) {
+//           fs.mkdirSync(dirs.resizedDir, { recursive: true });
+//         }
+        
+//         await sharp(resizedBuffer, {
+//           raw: { width, height, channels: 3 },
+//         })
+//           .jpeg()
+//           .toFile(resizedPath);
+//         inputPath = resizedPath;
+//         console.log(`    ✅ Image prepared: ${resizedPath}`);
+//       }
+//     } else {
+//       console.log(`    ⚫ Creating black frame`);
+//       const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
+//       if (!fs.existsSync(blackPath)) {
+//         await sharp(createBlackFrame(width, height), {
+//           raw: { width, height, channels: 3 },
+//         })
+//           .png()
+//           .toFile(blackPath);
+//       }
+//       inputPath = blackPath;
+//     }
+
+//     if (!fs.existsSync(inputPath)) {
+//       throw new Error(`Input not found: ${inputPath}`);
+//     }
+
+//     const clipPath = path.join(dirs.clipsDir, `clip_${chunk_id}.mp4`);
+//     clipPaths.push(clipPath);
+
+//     const args: string[] = [
+//       '-y',
+//       asset_type === 'image' ? '-loop' : '',
+//       asset_type === 'image' ? '1' : '',
+//       '-i',
+//       inputPath,
+//     ].filter(Boolean);
+
+//     let filterComplex = '';
+
+//     // For last clip with logo: show only blur background + logo (no card)
+//     if (isLastClip && logoPath && fs.existsSync(logoPath)) {
+//       console.log(`    🎨 Last clip: Creating blur background + logo only`);
+      
+//       const resizedLogoPath = await resizeLogoWithAspectRatio(
+//         logoPath,
+//         Math.floor(width * 0.4),
+//         Math.floor(height * 0.4),
+//         dirs.resizedDir,
+//         chunk_id
+//       );
+      
+//       if (resizedLogoPath && fs.existsSync(resizedLogoPath)) {
+//         args.push('-loop', '1', '-i', resizedLogoPath);
+        
+//         // Just blur background + logo, no card
+//         filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]scale=w=min(iw\\,${Math.floor(width * 0.4)}):h=min(ih\\,${Math.floor(height * 0.4)}):force_original_aspect_ratio=decrease[logo];[blurred][logo]overlay=(W-w)/2:(H-h)/2[vfinal]`;
+        
+//         console.log(`    ✅ Logo overlay added to blur background`);
+//       }
+//     } 
+//     // For other clips: show card with motion
+//     else {
+//       // Create rounded card image
+//       const cardPath = path.join(dirs.resizedDir, `card_${chunk_id}.png`)
+//       console.log(`    🎴 Creating rounded card with ${cornerRadius}px corners...`);
+//       await createRoundedCard(inputPath, width, height, cornerRadius, cardPath);
+//       console.log(`    ✅ Rounded card created`);
+
+//       args.push('-loop', '1', '-i',cardPath)
+
+//       const xExpr = generateCardMotionFilter(clipDuration, width, height, cardWidth, cardHeight);
+      
+//       // Blur background + card with instant disappear effect
+//       filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]format=rgba[card];[blurred][card]overlay=${xExpr}[vbase]`;
+//     }
+
+//     // Add text overlay with karaoke (only for non-last clips or last clip without logo)
+//     if (!(isLastClip && logoPath && fs.existsSync(logoPath))) {
+//       if (overlayText && words.length > 0) {
+//         const sceneStart = typeof start_time === 'number' ? start_time : 0;
+        
+//         const relativeWords = words.map((w: any) => {
+//           const startAbs = typeof w.start === 'number' ? w.start : 0;
+//           const endAbs = typeof w.end === 'number' ? w.end : startAbs;
+          
+//           const relStart = Math.max(0, startAbs - sceneStart);
+//           const relEnd = Math.max(0, endAbs - sceneStart);
+          
+//           return {
+//             word: w.word,
+//             start: Math.min(relStart, audio_duration),
+//             end: Math.min(relEnd, audio_duration),
+//           };
+//         });
+
+//         console.log(`    🎵 Karaoke timings (5-6 words chunks):`);
+//         relativeWords.forEach((w: any, idx: number) => {
+//           console.log(`       ${idx + 1}. "${w.word}" → ${w.start.toFixed(2)}s to ${w.end.toFixed(2)}s`);
+//         });
+        
+//         if (gapAfter > 0.01) {
+//           console.log(`    ⏸️  Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
+//         }
+
+//         const assFile = generateAssWithKaraoke(
+//           dirs.assDir,
+//           chunk_id,
+//           overlayText,
+//           audio_duration,
+//           relativeWords,
+//           templates,
+//           templateName,
+//           smallestAspectRatio,
+//           textStyle
+//         );
+        
+//         filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
+        
+//       } else if (overlayText) {
+//         const assFile = generateAssFromTemplate(
+//           dirs.assDir,
+//           chunk_id,
+//           overlayText,
+//           audio_duration || clipDuration,
+//           templates,
+//           templateName,
+//           smallestAspectRatio,
+//           textStyle
+//         );
+        
+//         filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
+        
+//       } else {
+//         filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
+//       }
+//     }
+
+//     args.push(
+//       '-filter_complex',
+//       filterComplex,
+//       '-map',
+//       '[vfinal]',
+//       '-r',
+//       String(fps),
+//       '-t',
+//       String(clipDuration.toFixed(3)),
+//       '-pix_fmt',
+//       'yuv420p',
+//       clipPath
+//     );
+
+//     console.log(`    🎬 Running FFmpeg with updated card motion effect...`);
+//     await runFfmpeg(args);
+//     console.log(`    ✅ Video clip created: ${clipPath}`);
+//   }
+
+//   const finalDuration = scenes.reduce((sum, s, idx) => {
+//     let dur = s.audio_duration || 0;
+    
+//     if (idx < scenes.length - 1) {
+//       const nextScene = scenes[idx + 1];
+//       const gap = nextScene.start_time - s.end_time;
+//       if (gap > 0.01) dur += gap;
+//     }
+    
+//     return sum + dur;
+//   }, 0);
+
+//   console.log(`\n🎉 All scenes processed with updated card motion effect!`);
+//   console.log(`📊 Total clips created: ${clipPaths.length}`);
+//   console.log(`📊 Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
+//   console.log(`📊 Calculated duration: ${finalDuration.toFixed(2)}s`);
+//   console.log(`🎴 Effect: Blur background + 75% card with ${cornerRadius}px rounded corners`);
+//   console.log(`🎬 Animation: Slide in from left → Instant disappear from center`);
+//   if (logoPath) {
+//     console.log(`🏷️  Last clip: Only blur background + logo (no card)`);
+//   } else {
+//     console.log(`🏷️  No logo: All clips show card with animation`);
+//   }
+//   console.log(`📁 Clips saved to: ${dirs.clipsDir}`);
+//   console.log(`📁 ASS files saved to: ${dirs.assDir}`);
+//   console.log(`📁 Resized files saved to: ${dirs.resizedDir}\n`);
+  
+//   return clipPaths;
+// }
