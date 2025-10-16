@@ -1,0 +1,20 @@
+[Script Info]
+Title: Clip_scene5_Karaoke_Chunks
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+Collisions: Normal
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Highlight,Cooper Black,10,&H0000FFFF,&H0000FFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,12,12,30,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.50,Highlight,,0,0,0,,{\c&H0000FFFF}Experience{\c&H0000FFFF} the ultimate in comfort and
+Dialogue: 0,0:00:00.50,0:00:00.94,Highlight,,0,0,0,,Experience {\c&H0000FFFF}the{\c&H0000FFFF} ultimate in comfort and
+Dialogue: 0,0:00:00.94,0:00:01.42,Highlight,,0,0,0,,Experience the {\c&H0000FFFF}ultimate{\c&H0000FFFF} in comfort and
+Dialogue: 0,0:00:01.42,0:00:01.72,Highlight,,0,0,0,,Experience the ultimate {\c&H0000FFFF}in{\c&H0000FFFF} comfort and
+Dialogue: 0,0:00:01.72,0:00:02.16,Highlight,,0,0,0,,Experience the ultimate in {\c&H0000FFFF}comfort{\c&H0000FFFF} and
+Dialogue: 0,0:00:02.16,0:00:02.50,Highlight,,0,0,0,,Experience the ultimate in comfort {\c&H0000FFFF}and{\c&H0000FFFF}
+Dialogue: 0,0:00:02.50,0:00:02.92,Highlight,,0,0,0,,{\c&H0000FFFF}style.{\c&H0000FFFF}

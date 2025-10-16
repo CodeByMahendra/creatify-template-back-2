@@ -1,0 +1,21 @@
+[Script Info]
+Title: Clip_scene4_Karaoke_Chunks
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+Collisions: Normal
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Highlight,Cooper Black,10,&H0000FFFF,&H0000FFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,12,12,30,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.30,Highlight,,0,0,0,,{\c&H0000FFFF}Don't{\c&H0000FFFF} miss this chance to elevate
+Dialogue: 0,0:00:00.30,0:00:00.48,Highlight,,0,0,0,,Don't {\c&H0000FFFF}miss{\c&H0000FFFF} this chance to elevate
+Dialogue: 0,0:00:00.48,0:00:00.70,Highlight,,0,0,0,,Don't miss {\c&H0000FFFF}this{\c&H0000FFFF} chance to elevate
+Dialogue: 0,0:00:00.70,0:00:01.06,Highlight,,0,0,0,,Don't miss this {\c&H0000FFFF}chance{\c&H0000FFFF} to elevate
+Dialogue: 0,0:00:01.06,0:00:01.30,Highlight,,0,0,0,,Don't miss this chance {\c&H0000FFFF}to{\c&H0000FFFF} elevate
+Dialogue: 0,0:00:01.30,0:00:01.68,Highlight,,0,0,0,,Don't miss this chance to {\c&H0000FFFF}elevate{\c&H0000FFFF}
+Dialogue: 0,0:00:01.68,0:00:02.00,Highlight,,0,0,0,,{\c&H0000FFFF}your{\c&H0000FFFF} journey.
+Dialogue: 0,0:00:02.00,0:00:02.40,Highlight,,0,0,0,,your {\c&H0000FFFF}journey.{\c&H0000FFFF}

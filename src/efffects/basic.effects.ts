@@ -377,7 +377,7 @@ export async function simple_video_effect(
 
   console.log('\n====== ANALYZING IMAGES ======');
 
-  // Aspect ratio detection (same as before)
+
   for (const scene of scenes) {
     if (scene.image_filename) {
       const imgPath = path.isAbsolute(scene.image_filename)
@@ -400,8 +400,8 @@ export async function simple_video_effect(
             if (area < smallestArea) {
               smallestArea = area;
               const ratio = metadata.width / metadata.height;
-              if (Math.abs(ratio - 16 / 9) < 0.01) smallestAspectRatio = '16:9';
-              else if (Math.abs(ratio - 9 / 16) < 0.01) smallestAspectRatio = '9:16';
+              if (Math.abs(ratio - 16 / 9) < 0.01) smallestAspectRatio = '1:1';
+              else if (Math.abs(ratio - 9 / 16) < 0.01) smallestAspectRatio = '1:1';
               else if (Math.abs(ratio - 1) < 0.01) smallestAspectRatio = '1:1';
               else if (Math.abs(ratio - 4 / 5) < 0.01) smallestAspectRatio = '4:5';
               else if (Math.abs(ratio - 4 / 3) < 0.01) smallestAspectRatio = '4:3';
@@ -422,8 +422,8 @@ export async function simple_video_effect(
             if (area < smallestArea) {
               smallestArea = area;
               const ratio = metadata.width / metadata.height;
-              if (Math.abs(ratio - 16 / 9) < 0.01) smallestAspectRatio = '16:9';
-              else if (Math.abs(ratio - 9 / 16) < 0.01) smallestAspectRatio = '9:16';
+              if (Math.abs(ratio - 16 / 9) < 0.01) smallestAspectRatio = '1:1';
+              else if (Math.abs(ratio - 9 / 16) < 0.01) smallestAspectRatio = '1:1';
               else if (Math.abs(ratio - 1) < 0.01) smallestAspectRatio = '1:1';
               else if (Math.abs(ratio - 4 / 5) < 0.01) smallestAspectRatio = '4:5';
               else if (Math.abs(ratio - 4 / 3) < 0.01) smallestAspectRatio = '4:3';

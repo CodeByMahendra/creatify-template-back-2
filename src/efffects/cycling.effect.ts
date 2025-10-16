@@ -1,4 +1,3 @@
-
 import * as path from 'path';
 import * as fs from 'fs';
 import sharp from 'sharp';
@@ -359,8 +358,6 @@ async function resizeLogoWithAspectRatio(
   }
 }
 
-
-
 export async function cycling_effects_video(
   scenes: any[],
   dirs: any,
@@ -650,58 +647,67 @@ export async function cycling_effects_video(
       let baseFilter = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
       
       // Apply effect based on cycle
-      switch (currentEffect) {
-        case 'zoom_in': {
-          // Zoom in: scale from 1.0 to 1.2 over duration
-          // Use if() expression to avoid quotes: if(lt(t,D), 1+0.2*t/D, 1.2)
-          const totalFrames = Math.ceil(clipDuration * fps);
-          const zoomFactor = 0.2;
-          
-          baseFilter += `,zoompan=z='if(lt(t,${clipDuration}), min(1.2, 1+${zoomFactor}*t/${clipDuration}), 1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${width}x${height}
-`;
-          console.log(`       📹 Zoom In (1.0 → 1.2)`);
-          break;
-        }
-          
-        case 'zoom_out': {
-          // Zoom out: scale from 1.2 to 1.0 over duration
-          const totalFrames = Math.ceil(clipDuration * fps);
-          const zoomFactor = 0.2;
-          
-          baseFilter += `,zoompan=z='if(lt(t,${clipDuration}), min(1.2, 1+${zoomFactor}*t/${clipDuration}), 1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${width}x${height}
-`;
-          console.log(`       📹 Zoom Out (1.2 → 1.0)`);
-          break;
-        }
-          
-        case 'wipe_left': {
-          // Wipe from right to left
-          baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];[black][base]overlay=x='if(lt(t,${clipDuration}), W-W*t/${clipDuration}, 0)':y=0`;
-          console.log(`       🔄 Wipe Left (right → left)`);
-          break;
-        }
-          
-        case 'wipe_right': {
-          // Wipe from left to right
-          baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];[black][base]`;
-          console.log(`       🔄 Wipe Right (left → right)`);
-          break;
-        }
-          
-        case 'white_box': {
-          // Transparent white box (40% width, 100% height) in center
-          const boxWidth = Math.floor(width * 0.4);
-          const boxX = Math.floor((width - boxWidth) / 2);
-          baseFilter += `[base];color=white@0.3:s=${boxWidth}x${height}:d=${clipDuration}[box];[base][box]overlay='${boxX}:0'
-`;
-          console.log(`       ⬜ White Box (40% width, center, 30% opacity)`);
-          break;
-        }
-          
-        default:
-          // No effect, just base
-          break;
-      }
+   switch (currentEffect) {
+case 'zoom_in': {
+  // SMOOTH Zoom In - No interp option (not supported in zoompan)
+  const totalFrames = Math.ceil(clipDuration * fps);
+  
+  // Pehle high-quality scale, phir zoompan (without interp)
+  baseFilter += `,scale=${width*2}:${height*2}:flags=lanczos,` +
+    `zoompan=z='min(1.25,1+0.25*on/${totalFrames})':d=${totalFrames}:` +
+    `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+    `s=${width}x${height}:fps=${fps}`;
+  
+  console.log(`       📹 Zoom In (1.0 → 1.25) - Smooth & Clear`);
+  break;
+}
+
+case 'zoom_out': {
+  // SMOOTH Zoom Out - No interp option (not supported in zoompan)
+  const totalFrames = Math.ceil(clipDuration * fps);
+  
+  // Pehle high-quality scale, phir zoompan (without interp)
+  baseFilter += `,scale=${width*2}:${height*2}:flags=lanczos,` +
+    `zoompan=z='max(1.0,1.25-0.25*on/${totalFrames})':d=${totalFrames}:` +
+    `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+    `s=${width}x${height}:fps=${fps}`;
+  
+  console.log(`       📹 Zoom Out (1.25 → 1.0) - Smooth & Clear`);
+  break;
+}
+case 'wipe_left': {
+  // Image static, black layer slides off LEFT (right→left movement)
+  const wipeDuration = clipDuration / 2; // Wipe speed
+  
+  baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
+    `[base][black]overlay=x='if(lt(t,${wipeDuration}),-W*t/${wipeDuration},W)':y=0`;
+  
+  console.log(`       🔄 Wipe Left - Black slides LEFT (R→L), reveals from right`);
+  break;
+}
+
+case 'wipe_right': {
+  // Image static, black layer slides off RIGHT (left→right movement) - OPPOSITE
+  const wipeDuration = clipDuration / 2; // Wipe speed
+  
+  baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
+    `[base][black]overlay=x='if(lt(t,${wipeDuration}),W*t/${wipeDuration},-W)':y=0`;
+  
+  console.log(`       🔄 Wipe Right - Black slides RIGHT (L→R), reveals from left`);
+  break;
+}
+
+  case 'white_box': {
+    // FIXED: 40% width box positioned at LEFT side (x=0)
+    const boxWidth = Math.floor(width * 0.4);
+    baseFilter += `[base];color=white@0.3:s=${boxWidth}x${height}:d=${clipDuration}[box];[base][box]overlay=0:0`;
+    console.log(`       ⬜ White Box (40% width, LEFT positioned, 30% opacity)`);
+    break;
+  }
+  default:
+    // No effect, just base
+    break;
+}
       
       filterComplex = baseFilter + '[vbase]';
     }

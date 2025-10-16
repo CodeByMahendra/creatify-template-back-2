@@ -329,7 +329,7 @@ basic: {
         styles: {
           Default: {
             fontname: 'Bebas Neue',
-          fontsize: 60,
+          fontsize: 40,
             primary_colour: '&H00FFFFFF',
             secondary_colour: '&&H000000FF',
             outline_colour: '&H00000000',
@@ -353,7 +353,7 @@ basic: {
           },
           Highlight: {
             fontname: 'Bebas Neue',
-           fontsize: 60,
+           fontsize: 40,
             primary_colour: '&H00FFFFFF',
             secondary_colour: '&&H000000FF',
             outline_colour: '&H00000000',
@@ -381,7 +381,7 @@ basic: {
         styles: {
           Default: {
             fontname: 'Bebas Neue',
-           fontsize: 60,
+           fontsize: 40,
             primary_colour: '&H00FFFFFF',
             secondary_colour: '&&H000000FF',
             outline_colour: '&H00000000',
@@ -405,7 +405,7 @@ basic: {
           },
           Highlight: {
             fontname: 'Bebas Neue',
-            fontsize: 60,
+            fontsize: 35,
             primary_colour: '&H00FFFFFF',
             secondary_colour: '&&H000000FF',
             outline_colour: '&H00000000',
@@ -433,7 +433,7 @@ basic: {
         styles: {
           Default: {
             fontname: 'Bebas Neue',
-        fontsize: 60,
+        fontsize: 35,
             primary_colour: '&H00FFFFFF',
             secondary_colour: '&&H000000FF',
             outline_colour: '&H00000000',
@@ -457,7 +457,7 @@ basic: {
           },
           Highlight: {
             fontname: 'Bebas Neue',
-           fontsize: 60,
+           fontsize: 35,
             primary_colour: '&H00FFFFFF',
             secondary_colour: '&&H000000FF',
             outline_colour: '&H00000000',
@@ -484,7 +484,7 @@ basic: {
     },
   },
 
-  stylish_slices_product: {
+  cycle: {
     aspect_ratios: {
       '16:9': {
         styles: {
