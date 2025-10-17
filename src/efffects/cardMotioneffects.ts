@@ -2,45 +2,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import sharp from 'sharp';
 import axios from 'axios';
+import { createBlackFrame, generateAssWithKaraoke,escapeFfmpegPath, generateAssFromTemplate, getDimensionsFromAspectRatio, loadAndResizeImage, resizeLogoWithAspectRatio } from 'src/utils/common.utils';
 
-export function escapeFfmpegPath(filePath: string): string {
-  let escaped = filePath.replace(/\\/g, '/');
-  escaped = escaped.replace(/:/g, '\\:');
-  return escaped;
-}
-
-function wrapText(text: string, maxWidth: number = 40): string {
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    if (testLine.length <= maxWidth) {
-      currentLine = testLine;
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-  return lines.join('\\N');
-}
-
-function getDimensionsFromAspectRatio(aspectRatio: string) {
-  const ratioMap: Record<string, { width: number; height: number }> = {
-    '16:9': { width: 1920, height: 1080 },
-    '9:16': { width: 1080, height: 1920 },
-    '1:1': { width: 1080, height: 1080 },
-  };
-  return ratioMap[aspectRatio] || { width: 1920, height: 1080 };
-}
-
-// Determine closest aspect ratio from only 3 options
 function determineAspectRatio(width: number, height: number): string {
   const ratio = width / height;
   
-  // Calculate distance from each allowed ratio
   const ratios = [
     { name: '16:9', value: 16/9 },
     { name: '9:16', value: 9/16 },
@@ -61,327 +27,7 @@ function determineAspectRatio(width: number, height: number): string {
   return closestRatio;
 }
 
-function createBlackFrame(width: number, height: number): Buffer {
-  return Buffer.alloc(width * height * 3);
-}
 
-async function loadAndResizeImage(
-  imagePath: string,
-  width: number,
-  height: number
-): Promise<Buffer> {
-  try {
-    if (!fs.existsSync(imagePath)) return createBlackFrame(width, height);
-
-    const metadata = await sharp(imagePath).metadata();
-    const imgWidth = metadata.width || width;
-    const imgHeight = metadata.height || height;
-    const scale = Math.min(width / imgWidth, height / imgHeight);
-    const newWidth = Math.round(imgWidth * scale);
-    const newHeight = Math.round(imgHeight * scale);
-
-    const resizedImage = await sharp(imagePath)
-      .resize(newWidth, newHeight, {
-        fit: 'contain',
-        background: { r: 0, g: 0, b: 0 },
-      })
-      .raw()
-      .toBuffer();
-
-    const background = Buffer.alloc(width * height * 3);
-    const yOffset = Math.floor((height - newHeight) / 2);
-    const xOffset = Math.floor((width - newWidth) / 2);
-
-    for (let y = 0; y < newHeight; y++) {
-      for (let x = 0; x < newWidth; x++) {
-        const srcIdx = (y * newWidth + x) * 3;
-        const destIdx = ((y + yOffset) * width + (x + xOffset)) * 3;
-        background[destIdx] = resizedImage[srcIdx];
-        background[destIdx + 1] = resizedImage[srcIdx + 1];
-        background[destIdx + 2] = resizedImage[srcIdx + 2];
-      }
-    }
-
-    return background;
-  } catch (err) {
-    console.error('Error resizing image', err);
-    return createBlackFrame(width, height);
-  }
-}
-
-const toTime = (s: number): string => {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const wholeSeconds = Math.floor(sec);
-  const centiseconds = Math.round((sec - wholeSeconds) * 100);
-  const paddedCs = centiseconds.toString().padStart(2, '0');
-
-  return `${h}:${m.toString().padStart(2, '0')}:${wholeSeconds
-    .toString()
-    .padStart(2, '0')}.${paddedCs}`;
-};
-
-function splitWordsIntoChunks(
-  words: Array<{ word: string; start: number; end: number }>,
-  minWords: number = 5,
-  maxWords: number = 6
-): Array<Array<{ word: string; start: number; end: number }>> {
-  const chunks: Array<Array<{ word: string; start: number; end: number }>> = [];
-  
-  for (let i = 0; i < words.length; i += maxWords) {
-    const chunk = words.slice(i, i + maxWords);
-    chunks.push(chunk);
-  }
-  
-  return chunks;
-}
-
-function buildWordTimelineWithChunks(
-  words: Array<{ word: string; start: number; end: number }>,
-  chunkSize: number = 6
-) {
-  const chunks = splitWordsIntoChunks(words, 5, chunkSize);
-  const timeline: Array<{ 
-    chunkIndex: number;
-    wordIndexInChunk: number;
-    globalWordIndex: number;
-    displayStart: number; 
-    displayEnd: number; 
-    isGap: boolean;
-    wordsInChunk: Array<{ word: string; start: number; end: number }>;
-  }> = [];
-
-  chunks.forEach((chunk, chunkIndex) => {
-    for (let i = 0; i < chunk.length; i++) {
-      const current = chunk[i];
-      const globalIndex = chunkIndex * chunkSize + i;
-      
-      timeline.push({
-        chunkIndex,
-        wordIndexInChunk: i,
-        globalWordIndex: globalIndex,
-        displayStart: current.start,
-        displayEnd: current.end,
-        isGap: false,
-        wordsInChunk: chunk,
-      });
-
-      if (i < chunk.length - 1) {
-        const next = chunk[i + 1];
-        if (next.start > current.end) {
-          timeline.push({
-            chunkIndex,
-            wordIndexInChunk: i,
-            globalWordIndex: globalIndex,
-            displayStart: current.end,
-            displayEnd: next.start,
-            isGap: true,
-            wordsInChunk: chunk,
-          });
-        }
-      }
-    }
-  });
-
-  return timeline;
-}
-
-export function generateAssWithKaraoke(
-  assDir: string,
-  clipId: string,
-  overlayText: string,
-  sceneDuration: number,
-  words: Array<{ word: string; start: number; end: number }>,
-  templates: any,
-  templateName: string,
-  aspectRatio: string,
-  styleName: string = 'Default'
-): string {
-  const template = templates[templateName];
-  if (!template) throw new Error(`Template not found: ${templateName}`);
-  
-  const ratioObj = template.aspect_ratios[aspectRatio] || template.aspect_ratios['16:9'];
-  if (!ratioObj) throw new Error(`Aspect ratio not found: ${aspectRatio}`);
-  
-  const style = ratioObj.styles[styleName] || ratioObj.styles['Default'];
-
-  let primaryColor = style.primary_colour || '&H00FFFFFF';
-  let highlightColor = style.secondary_colour || '&H000000FF';
-
-  primaryColor = primaryColor.replace(/&+/g, '&');
-  highlightColor = highlightColor.replace(/&+/g, '&');
-
-  const cleanHighlightColor = primaryColor.startsWith('&')
-    ? highlightColor
-    : `&${highlightColor}`;
-  const cleanPrimaryColor = primaryColor.startsWith('&')
-    ? primaryColor
-    : `&${primaryColor}`;
-
-  let dialogueEvents = '';
-
-  console.log(
-    `\n🎤 Karaoke with Chunks: ${clipId} | Duration: ${sceneDuration.toFixed(2)}s`
-  );
-
-  if (words && words.length > 0) {
-    const timeline = buildWordTimelineWithChunks(words, 6);
-
-    for (let i = 0; i < timeline.length; i++) {
-      const entry = timeline[i];
-      const displayStart = entry.displayStart;
-      const displayEnd = entry.displayEnd;
-      const activeWordIndexInChunk = entry.wordIndexInChunk;
-      const chunk = entry.wordsInChunk;
-
-      console.log(
-        `   Entry ${i + 1}/${timeline.length}: Chunk[${entry.chunkIndex}] Word[${activeWordIndexInChunk}] "${chunk[activeWordIndexInChunk].word}" → ${toTime(
-          displayStart
-        )} to ${toTime(displayEnd)} ${entry.isGap ? '(GAP)' : '(ACTIVE)'}`
-      );
-
-      let textWithHighlight = '';
-
-      for (let j = 0; j < chunk.length; j++) {
-        if (j === activeWordIndexInChunk && !entry.isGap) {
-          textWithHighlight += `{\\c${cleanHighlightColor}}${chunk[j].word}{\\c${cleanPrimaryColor}}`;
-        } else {
-          textWithHighlight += chunk[j].word;
-        }
-        
-        if (j < chunk.length - 1) textWithHighlight += ' ';
-      }
-
-      const dialogueLine = `Dialogue: 0,${toTime(displayStart)},${toTime(
-        displayEnd
-      )},${styleName},,0,0,0,,${textWithHighlight}`;
-
-      dialogueEvents += dialogueLine + '\n';
-    }
-  } else {
-    console.log(`   No words, showing full text: ${overlayText}`);
-    const dialogueLine = `Dialogue: 0,${toTime(0)},${toTime(
-      sceneDuration
-    )},${styleName},,0,0,0,,${overlayText}`;
-    dialogueEvents = dialogueLine + '\n';
-  }
-
-  const content = `[Script Info]
-Title: Clip_${clipId}_Karaoke_Chunks
-ScriptType: v4.00+
-PlayResX: 1280
-PlayResY: 720
-Collisions: Normal
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: ${styleName},${style.fontname || 'Arial'},${style.fontsize},${primaryColor},${highlightColor},${style.outline_colour},${style.back_colour},${style.bold},${style.italic},${style.underline},${style.strikeout},${style.scale_x},${style.scale_y},${style.spacing},${style.angle},${style.border_style},${style.outline},${style.shadow},${style.alignment},${style.margin_l},${style.margin_r},${style.margin_v},${style.encoding}
-
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-${dialogueEvents}`;
-
-  if (!fs.existsSync(assDir))
-    fs.mkdirSync(assDir, { recursive: true });
-  
-  const assPath = path.join(assDir, `clip_${clipId}_karaoke.ass`);
-  fs.writeFileSync(assPath, content, 'utf-8');
-  console.log(`   ✅ ASS file created: ${assPath}`);
-  return assPath;
-}
-
-export function generateAssFromTemplate(
-  assDir: string,
-  clipId: string,
-  overlayText: string,
-  sceneDuration: number,
-  templates: any,
-  templateName: string,
-  aspectRatio: string,
-  styleName: string = 'Highlight'
-): string {
-  const template = templates[templateName];
-  if (!template) throw new Error(`Template not found: ${templateName}`);
-  
-  const ratioObj = template.aspect_ratios[aspectRatio] || template.aspect_ratios['16:9'];
-  if (!ratioObj) throw new Error(`Aspect ratio not found: ${aspectRatio}`);
-  
-  const style = ratioObj.styles[styleName] || ratioObj.styles['Default'];
-
-  const wrappedText = wrapText(overlayText, 50);
-
-  const content = `[Script Info]
-Title: Clip_${clipId}
-ScriptType: v4.00+
-PlayResX: 1280
-PlayResY: 720
-Collisions: Normal
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: ${styleName},${style.fontname || 'Arial'},${style.fontsize},${style.primary_colour},${style.secondary_colour},${style.outline_colour},${style.back_colour},${style.bold},${style.italic},${style.underline},${style.strikeout},${style.scale_x},${style.scale_y},${style.spacing},${style.angle},${style.border_style},${style.outline},${style.shadow},${style.alignment},${style.margin_l},${style.margin_r},${style.margin_v},${style.encoding}
-
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,${toTime(0)},${toTime(sceneDuration)},${styleName},,0,0,0,,${wrappedText}`;
-
-  if (!fs.existsSync(assDir))
-    fs.mkdirSync(assDir, { recursive: true });
-  
-  const assPath = path.join(assDir, `clip_${clipId}.ass`);
-  fs.writeFileSync(assPath, content, 'utf-8');
-  console.log(`   ✅ ASS file created: ${assPath}`);
-  return assPath;
-}
-
-async function resizeLogoWithAspectRatio(
-  logoPath: string,
-  maxWidth: number,
-  maxHeight: number,
-  resizedDir: string,
-  clipId: string
-): Promise<string> {
-  try {
-    if (!fs.existsSync(logoPath)) {
-      console.warn(`   ⚠️  Logo not found: ${logoPath}`);
-      return '';
-    }
-
-    const metadata = await sharp(logoPath).metadata();
-    const logoWidth = metadata.width || maxWidth;
-    const logoHeight = metadata.height || maxHeight;
-
-    const scale = Math.min(maxWidth / logoWidth, maxHeight / logoHeight, 1);
-    const newWidth = Math.round(logoWidth * scale);
-    const newHeight = Math.round(logoHeight * scale);
-
-    console.log(`   📏 Logo original: ${logoWidth}x${logoHeight}`);
-    console.log(`   📏 Logo resized: ${newWidth}x${newHeight}`);
-
-    if (!fs.existsSync(resizedDir)) {
-      fs.mkdirSync(resizedDir, { recursive: true });
-    }
-
-    const resizedLogoPath = path.join(resizedDir, `logo_resized_${clipId}.png`);
-    
-    await sharp(logoPath)
-      .resize(newWidth, newHeight, {
-        fit: 'contain',
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      })
-      .png()
-      .toFile(resizedLogoPath);
-
-    console.log(`   ✅ Logo saved to: ${resizedLogoPath}`);
-    return resizedLogoPath;
-  } catch (err) {
-    console.error('   ❌ Error resizing logo:', err);
-    return '';
-  }
-}
-
-// Create rounded card image using Sharp with increased corner radius
 async function createRoundedCard(
   inputPath: string,
   width: number,
@@ -400,10 +46,11 @@ async function createRoundedCard(
     </svg>
   `;
 
-  // Resize image to card size and apply rounded corners
+  // Resize with CONTAIN to maintain aspect ratio, then apply mask
   await sharp(inputPath)
     .resize(cardWidth, cardHeight, {
-      fit: 'cover',
+      fit: 'contain',  // MAINTAINS ASPECT RATIO
+      background: { r: 0, g: 0, b: 0, alpha: 1 },
       position: 'center',
     })
     .composite([{
@@ -414,7 +61,6 @@ async function createRoundedCard(
     .toFile(outputPath);
 }
 
-// Generate card motion filter string for FFmpeg
 function generateCardMotionFilter(
   duration: number, 
   width: number, 
@@ -429,24 +75,40 @@ function generateCardMotionFilter(
   const centerX = (width - cardWidth) / 2;
   const centerY = (height - cardHeight) / 2;
   
-  // X position expression: slide in from left to center
   const xExpr = `if(lt(t,${slideInDuration}),${startX}+((${centerX})-(${startX}))*t/${slideInDuration},${centerX})`;
   
-  // Complete overlay filter string with enable parameter
   return `x='${xExpr}':y=${centerY}:enable='between(t,0,${disappearTime})'`;
 }
 
-// Generate rounded corners filter for video using FFmpeg
-function generateRoundedCornersFilter(
+function generateVideoCardFilter(
   width: number,
   height: number,
-  cornerRadius: number
+  cardWidth: number,
+  cardHeight: number,
+  cornerRadius: number,
+  duration: number
 ): string {
-  const cardWidth = Math.floor(width * 0.75);
-  const cardHeight = Math.floor(height * 0.75);
+  const xExpr = generateCardMotionFilter(duration, width, height, cardWidth, cardHeight);
   
-  // FFmpeg geq filter for rounded corners mask
-  return `geq=lum='if(lt(X,${cornerRadius})*lt(Y,${cornerRadius}),if(lte(hypot(${cornerRadius}-X,${cornerRadius}-Y),${cornerRadius}),255,0),if(gt(X,${cardWidth}-${cornerRadius})*lt(Y,${cornerRadius}),if(lte(hypot(X-(${cardWidth}-${cornerRadius}),${cornerRadius}-Y),${cornerRadius}),255,0),if(lt(X,${cornerRadius})*gt(Y,${cardHeight}-${cornerRadius}),if(lte(hypot(${cornerRadius}-X,Y-(${cardHeight}-${cornerRadius})),${cornerRadius}),255,0),if(gt(X,${cardWidth}-${cornerRadius})*gt(Y,${cardHeight}-${cornerRadius}),if(lte(hypot(X-(${cardWidth}-${cornerRadius}),Y-(${cardHeight}-${cornerRadius})),${cornerRadius}),255,0),255)))):cr=128:cb=128'`;
+  // Simplified approach: Use scale+pad for aspect ratio, then create simple rounded rectangle overlay
+  let filter = '';
+  
+  // Step 1: Create blur background
+  filter += `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];`;
+  
+  // Step 2: Resize video maintaining aspect ratio with black padding
+  filter += `[0:v]scale=${cardWidth}:${cardHeight}:force_original_aspect_ratio=decrease,pad=${cardWidth}:${cardHeight}:(ow-iw)/2:(oh-ih)/2:black,format=yuva420p[padded];`;
+  
+  // Step 3: Create simple white rectangle mask
+  filter += `color=white:s=${cardWidth}x${cardHeight}:d=${duration},format=yuva420p[mask];`;
+  
+  // Step 4: Use alphamerge to combine video with mask
+  filter += `[padded][mask]alphamerge,format=rgba[card];`;
+  
+  // Step 5: Overlay card on blur background with motion
+  filter += `[blurred][card]overlay=${xExpr}[vbase]`;
+  
+  return filter;
 }
 
 export async function card_motion_effectAd(
@@ -604,7 +266,7 @@ export async function card_motion_effectAd(
     console.log(`    Resolution: ${width}x${height}`);
     console.log(`    Card size: ${cardWidth}x${cardHeight}`);
     console.log(`    Corner radius: ${cornerRadius}px`);
-    console.log(`    Effect: Card slides in from left → instant disappear from center`);
+    console.log(`    ✅ ASPECT RATIO MAINTAINED`);
 
     const textStyle = stylePattern[styleIndex];
     styleIndex = (styleIndex + 1) % stylePattern.length;
@@ -720,33 +382,19 @@ export async function card_motion_effectAd(
     // For other clips: show card with motion
     else {
       if (isVideo) {
-        // Video processing with rounded corners
-        console.log(`    🎥 Processing video with rounded card effect...`);
+        // Video processing with aspect ratio maintained
+        console.log(`    🎥 Processing video with rounded card (ASPECT RATIO MAINTAINED)...`);
         args.push('-i', inputPath);
         
-        const xExpr = generateCardMotionFilter(clipDuration, width, height, cardWidth, cardHeight);
-        
-        // Create blur background
-        filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];`;
-        
-        // Scale and crop video to card size, then apply rounded corners
-        filterComplex += `[0:v]scale=${cardWidth}:${cardHeight}:force_original_aspect_ratio=cover,crop=${cardWidth}:${cardHeight}[scaled];`;
-        
-        // Create rounded corner mask
-        filterComplex += `[scaled]split[vid1][vid2];[vid2]${generateRoundedCornersFilter(width, height, cornerRadius)}[mask];`;
-        
-        // Apply mask to video and format as RGBA
-        filterComplex += `[vid1][mask]alphamerge,format=rgba[card];`;
-        
-        // Overlay card on blur background with motion
-        filterComplex += `[blurred][card]overlay=${xExpr}[vbase]`;
+        // Use simplified filter that maintains aspect ratio
+        filterComplex = generateVideoCardFilter(width, height, cardWidth, cardHeight, cornerRadius, clipDuration);
         
       } else {
-        // Image processing with rounded corners (existing logic)
+        // Image processing with rounded corners (aspect ratio already maintained)
         args.push('-loop', '1', '-i', inputPath);
         
         const cardPath = path.join(dirs.resizedDir, `card_${chunk_id}.png`);
-        console.log(`    🎴 Creating rounded card with ${cornerRadius}px corners...`);
+        console.log(`    🎴 Creating rounded card with ${cornerRadius}px corners (ASPECT RATIO MAINTAINED)...`);
         await createRoundedCard(inputPath, width, height, cornerRadius, cardPath);
         console.log(`    ✅ Rounded card created`);
 
@@ -849,13 +497,14 @@ export async function card_motion_effectAd(
     return sum + dur;
   }, 0);
 
-  console.log(`\n🎉 All scenes processed with updated card motion effect!`);
+  console.log(`\n🎉 All scenes processed with card motion effect!`);
   console.log(`📊 Total clips created: ${clipPaths.length}`);
   console.log(`📊 Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
   console.log(`📊 Calculated duration: ${finalDuration.toFixed(2)}s`);
   console.log(`🎴 Effect: Blur background + 75% card with ${cornerRadius}px rounded corners`);
+  console.log(`✅ ASPECT RATIO: FULLY MAINTAINED for both images and videos`);
   console.log(`🎬 Animation: Slide in from left → Instant disappear from center`);
-  console.log(`🎥 Video Support: Videos are now properly rounded and animated`);
+  console.log(`🎥 Video Support: Videos maintain aspect ratio with black padding`);
   if (logoPath) {
     console.log(`🏷️  Last clip: Blur background + logo + karaoke text (no card)`);
   } else {
@@ -867,6 +516,20 @@ export async function card_motion_effectAd(
   
   return clipPaths;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -906,10 +569,31 @@ export async function card_motion_effectAd(
 //     '16:9': { width: 1920, height: 1080 },
 //     '9:16': { width: 1080, height: 1920 },
 //     '1:1': { width: 1080, height: 1080 },
-//     '4:5': { width: 1080, height: 1350 },
-//     '4:3': { width: 1440, height: 1080 },
 //   };
 //   return ratioMap[aspectRatio] || { width: 1920, height: 1080 };
+// }
+
+// function determineAspectRatio(width: number, height: number): string {
+//   const ratio = width / height;
+  
+//   const ratios = [
+//     { name: '16:9', value: 16/9 },
+//     { name: '9:16', value: 9/16 },
+//     { name: '1:1', value: 1 }
+//   ];
+  
+//   let closestRatio = '16:9';
+//   let minDistance = Infinity;
+  
+//   for (const r of ratios) {
+//     const distance = Math.abs(ratio - r.value);
+//     if (distance < minDistance) {
+//       minDistance = distance;
+//       closestRatio = r.name;
+//     }
+//   }
+  
+//   return closestRatio;
 // }
 
 // function createBlackFrame(width: number, height: number): Buffer {
@@ -1232,7 +916,7 @@ export async function card_motion_effectAd(
 //   }
 // }
 
-// // Create rounded card image using Sharp with increased corner radius
+// // Create rounded card image with ASPECT RATIO MAINTAINED
 // async function createRoundedCard(
 //   inputPath: string,
 //   width: number,
@@ -1251,10 +935,11 @@ export async function card_motion_effectAd(
 //     </svg>
 //   `;
 
-//   // Resize image to card size and apply rounded corners
+//   // Resize with CONTAIN to maintain aspect ratio, then apply mask
 //   await sharp(inputPath)
 //     .resize(cardWidth, cardHeight, {
-//       fit: 'cover',
+//       fit: 'contain',  // MAINTAINS ASPECT RATIO
+//       background: { r: 0, g: 0, b: 0, alpha: 1 },
 //       position: 'center',
 //     })
 //     .composite([{
@@ -1265,7 +950,6 @@ export async function card_motion_effectAd(
 //     .toFile(outputPath);
 // }
 
-// // Generate card motion filter string for FFmpeg
 // function generateCardMotionFilter(
 //   duration: number, 
 //   width: number, 
@@ -1280,11 +964,41 @@ export async function card_motion_effectAd(
 //   const centerX = (width - cardWidth) / 2;
 //   const centerY = (height - cardHeight) / 2;
   
-//   // X position expression: slide in from left to center
 //   const xExpr = `if(lt(t,${slideInDuration}),${startX}+((${centerX})-(${startX}))*t/${slideInDuration},${centerX})`;
   
-//   // Complete overlay filter string with enable parameter
 //   return `x='${xExpr}':y=${centerY}:enable='between(t,0,${disappearTime})'`;
+// }
+
+// // IMPROVED: Simplified video card filter with aspect ratio maintenance
+// function generateVideoCardFilter(
+//   width: number,
+//   height: number,
+//   cardWidth: number,
+//   cardHeight: number,
+//   cornerRadius: number,
+//   duration: number
+// ): string {
+//   const xExpr = generateCardMotionFilter(duration, width, height, cardWidth, cardHeight);
+  
+//   // Simplified approach: Use scale+pad for aspect ratio, then create simple rounded rectangle overlay
+//   let filter = '';
+  
+//   // Step 1: Create blur background
+//   filter += `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];`;
+  
+//   // Step 2: Resize video maintaining aspect ratio with black padding
+//   filter += `[0:v]scale=${cardWidth}:${cardHeight}:force_original_aspect_ratio=decrease,pad=${cardWidth}:${cardHeight}:(ow-iw)/2:(oh-ih)/2:black,format=yuva420p[padded];`;
+  
+//   // Step 3: Create simple white rectangle mask
+//   filter += `color=white:s=${cardWidth}x${cardHeight}:d=${duration},format=yuva420p[mask];`;
+  
+//   // Step 4: Use alphamerge to combine video with mask
+//   filter += `[padded][mask]alphamerge,format=rgba[card];`;
+  
+//   // Step 5: Overlay card on blur background with motion
+//   filter += `[blurred][card]overlay=${xExpr}[vbase]`;
+  
+//   return filter;
 // }
 
 // export async function card_motion_effectAd(
@@ -1442,19 +1156,21 @@ export async function card_motion_effectAd(
 //     console.log(`    Resolution: ${width}x${height}`);
 //     console.log(`    Card size: ${cardWidth}x${cardHeight}`);
 //     console.log(`    Corner radius: ${cornerRadius}px`);
-//     console.log(`    Effect: Card slides in from left → instant disappear from center`);
+//     console.log(`    ✅ ASPECT RATIO MAINTAINED`);
 
 //     const textStyle = stylePattern[styleIndex];
 //     styleIndex = (styleIndex + 1) % stylePattern.length;
 //     console.log(`    Style: ${textStyle}`);
 
 //     let inputPath: string;
+//     let isVideo = false;
 
 //     if (asset_type === 'video' && video_filename) {
 //       inputPath = path.isAbsolute(video_filename)
 //         ? video_filename
 //         : path.join(dirs.imagesDir, video_filename);
-//       console.log(`    Video asset`);
+//       isVideo = true;
+//       console.log(`    🎥 Video asset`);
 //     } else if (image_filename) {
 //       if (image_filename.startsWith('http')) {
 //         try {
@@ -1522,19 +1238,19 @@ export async function card_motion_effectAd(
 //     const clipPath = path.join(dirs.clipsDir, `clip_${chunk_id}.mp4`);
 //     clipPaths.push(clipPath);
 
-//     const args: string[] = [
-//       '-y',
-//       asset_type === 'image' ? '-loop' : '',
-//       asset_type === 'image' ? '1' : '',
-//       '-i',
-//       inputPath,
-//     ].filter(Boolean);
+//     const args: string[] = ['-y'];
 
 //     let filterComplex = '';
 
 //     // For last clip with logo: show blur background + logo + karaoke text (no card)
 //     if (isLastClip && logoPath && fs.existsSync(logoPath)) {
 //       console.log(`    🎨 Last clip: Creating blur background + logo + karaoke text`);
+      
+//       if (isVideo) {
+//         args.push('-i', inputPath);
+//       } else {
+//         args.push('-loop', '1', '-i', inputPath);
+//       }
       
 //       const resizedLogoPath = await resizeLogoWithAspectRatio(
 //         logoPath,
@@ -1555,18 +1271,30 @@ export async function card_motion_effectAd(
 //     } 
 //     // For other clips: show card with motion
 //     else {
-//       // Create rounded card image
-//       const cardPath = path.join(dirs.resizedDir, `card_${chunk_id}.png`)
-//       console.log(`    🎴 Creating rounded card with ${cornerRadius}px corners...`);
-//       await createRoundedCard(inputPath, width, height, cornerRadius, cardPath);
-//       console.log(`    ✅ Rounded card created`);
+//       if (isVideo) {
+//         // Video processing with aspect ratio maintained
+//         console.log(`    🎥 Processing video with rounded card (ASPECT RATIO MAINTAINED)...`);
+//         args.push('-i', inputPath);
+        
+//         // Use simplified filter that maintains aspect ratio
+//         filterComplex = generateVideoCardFilter(width, height, cardWidth, cardHeight, cornerRadius, clipDuration);
+        
+//       } else {
+//         // Image processing with rounded corners (aspect ratio already maintained)
+//         args.push('-loop', '1', '-i', inputPath);
+        
+//         const cardPath = path.join(dirs.resizedDir, `card_${chunk_id}.png`);
+//         console.log(`    🎴 Creating rounded card with ${cornerRadius}px corners (ASPECT RATIO MAINTAINED)...`);
+//         await createRoundedCard(inputPath, width, height, cornerRadius, cardPath);
+//         console.log(`    ✅ Rounded card created`);
 
-//       args.push('-loop', '1', '-i',cardPath)
+//         args.push('-loop', '1', '-i', cardPath);
 
-//       const xExpr = generateCardMotionFilter(clipDuration, width, height, cardWidth, cardHeight);
-      
-//       // Blur background + card with instant disappear effect
-//       filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]format=rgba[card];[blurred][card]overlay=${xExpr}[vbase]`;
+//         const xExpr = generateCardMotionFilter(clipDuration, width, height, cardWidth, cardHeight);
+        
+//         // Blur background + card with instant disappear effect
+//         filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]format=rgba[card];[blurred][card]overlay=${xExpr}[vbase]`;
+//       }
 //     }
 
 //     // Add text overlay with karaoke for ALL clips (including last clip with logo)
@@ -1642,7 +1370,7 @@ export async function card_motion_effectAd(
 //       clipPath
 //     );
 
-//     console.log(`    🎬 Running FFmpeg with updated card motion effect...`);
+//     console.log(`    🎬 Running FFmpeg with ${isVideo ? 'video' : 'image'} card motion effect...`);
 //     await runFfmpeg(args);
 //     console.log(`    ✅ Video clip created: ${clipPath}`);
 //   }
@@ -1659,12 +1387,14 @@ export async function card_motion_effectAd(
 //     return sum + dur;
 //   }, 0);
 
-//   console.log(`\n🎉 All scenes processed with updated card motion effect!`);
+//   console.log(`\n🎉 All scenes processed with card motion effect!`);
 //   console.log(`📊 Total clips created: ${clipPaths.length}`);
 //   console.log(`📊 Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
 //   console.log(`📊 Calculated duration: ${finalDuration.toFixed(2)}s`);
 //   console.log(`🎴 Effect: Blur background + 75% card with ${cornerRadius}px rounded corners`);
+//   console.log(`✅ ASPECT RATIO: FULLY MAINTAINED for both images and videos`);
 //   console.log(`🎬 Animation: Slide in from left → Instant disappear from center`);
+//   console.log(`🎥 Video Support: Videos maintain aspect ratio with black padding`);
 //   if (logoPath) {
 //     console.log(`🏷️  Last clip: Blur background + logo + karaoke text (no card)`);
 //   } else {

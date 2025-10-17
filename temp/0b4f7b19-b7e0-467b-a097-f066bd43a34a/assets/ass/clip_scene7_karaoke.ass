@@ -1,0 +1,26 @@
+[Script Info]
+Title: Clip_scene7_Karaoke_Chunks
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+Collisions: Normal
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: CenterBoxHighlight,Cooper Black,52,&H00FF99FF,&H00FF00FF,&H00000000,&HC0502050,-1,0,0,0,100,100,0,0,4,2,1,5,35,35,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.92,CenterBoxHighlight,,0,0,0,,{\c&H00FF00FF}Discover{\c&H00FF99FF} your sea escape today with
+Dialogue: 0,0:00:00.92,0:00:01.24,CenterBoxHighlight,,0,0,0,,Discover {\c&H00FF00FF}your{\c&H00FF99FF} sea escape today with
+Dialogue: 0,0:00:01.24,0:00:01.54,CenterBoxHighlight,,0,0,0,,Discover your {\c&H00FF00FF}sea{\c&H00FF99FF} escape today with
+Dialogue: 0,0:00:01.54,0:00:01.82,CenterBoxHighlight,,0,0,0,,Discover your sea {\c&H00FF00FF}escape{\c&H00FF99FF} today with
+Dialogue: 0,0:00:01.82,0:00:02.24,CenterBoxHighlight,,0,0,0,,Discover your sea escape {\c&H00FF00FF}today{\c&H00FF99FF} with
+Dialogue: 0,0:00:02.24,0:00:02.54,CenterBoxHighlight,,0,0,0,,Discover your sea escape today {\c&H00FF00FF}with{\c&H00FF99FF}
+Dialogue: 0,0:00:02.54,0:00:03.20,CenterBoxHighlight,,0,0,0,,{\c&H00FF00FF}Sunseeker,{\c&H00FF99FF} the leader in luxury yachts.
+Dialogue: 0,0:00:03.20,0:00:03.56,CenterBoxHighlight,,0,0,0,,Sunseeker, the leader in luxury yachts.
+Dialogue: 0,0:00:03.56,0:00:03.66,CenterBoxHighlight,,0,0,0,,Sunseeker, {\c&H00FF00FF}the{\c&H00FF99FF} leader in luxury yachts.
+Dialogue: 0,0:00:03.66,0:00:03.98,CenterBoxHighlight,,0,0,0,,Sunseeker, the {\c&H00FF00FF}leader{\c&H00FF99FF} in luxury yachts.
+Dialogue: 0,0:00:03.98,0:00:04.24,CenterBoxHighlight,,0,0,0,,Sunseeker, the leader {\c&H00FF00FF}in{\c&H00FF99FF} luxury yachts.
+Dialogue: 0,0:00:04.24,0:00:04.58,CenterBoxHighlight,,0,0,0,,Sunseeker, the leader in {\c&H00FF00FF}luxury{\c&H00FF99FF} yachts.
+Dialogue: 0,0:00:04.58,0:00:05.54,CenterBoxHighlight,,0,0,0,,Sunseeker, the leader in luxury {\c&H00FF00FF}yachts.{\c&H00FF99FF}

@@ -1,266 +1,14 @@
-// import { parentPort, workerData } from 'worker_threads';
-// import * as path from 'path';
-// import * as fs from 'fs';
-// import { saveSceneAssets, Scene } from 'src/utils/saveSceneImages';
-
-// import { runFfmpeg } from 'src/utils/ffmpeg.utils';
-// import { overlayTemplates } from 'src/utils/overlayStyles';
-// import { card_motion_effectAd } from 'src/efffects/cardMotioneffects';
-// import { simple_video_effect } from 'src/efffects/basic.effects';
-// import { zoom_effectAd } from 'src/efffects/zoom_effect';
-// import { cycling_effects_video } from 'src/efffects/cycling.effect';
-
-// interface WorkerData {
-//   requestId: string;
-//   scenes: Scene[];
-//   effectType?: string;
-//   audio_url?: string;
-//   logo_url?: string;
-//   dirs: {
-//     requestDir: string;
-//     assetsDir: string;
-//     imagesDir: string;
-//     audioDir: string;
-//     videosDir: string;
-//     logoDir: string;
-//     clipsDir: string;
-//     assDir: string;
-//     resizedDir: string;
-//     tempDir: string;
-//     outputDir: string;
-
-//      // ✅ Add these two:
-//     globalAudioDir: string;
-//     musicDir: string;
-//   };
-//   fps: number;
-// }
-
-// function escapePath(p: string) {
-//   return p.replace(/\\/g, '/');
-// }
-
-// async function buildVideoWorker(data: WorkerData) {
-//   const { requestId, scenes, effectType, audio_url, logo_url, dirs, fps } =
-//     data;
-
-//   console.log(`🎬 [${requestId}] Starting video build...`);
-//   console.log(`📁 [${requestId}] Directories:`, JSON.stringify(dirs, null, 2));
-
-//   // ✅ Verify all directories exist
-//   for (const [key, dirPath] of Object.entries(dirs)) {
-//     if (!dirPath) {
-//       throw new Error(`[${requestId}] Missing directory: ${key}`);
-//     }
-//     if (!fs.existsSync(dirPath)) {
-//       fs.mkdirSync(dirPath, { recursive: true });
-//       console.log(`📁 [${requestId}] Created: ${key}`);
-//     }
-//   }
-
-//   const { updatedScenes: scenesWithAssets, logoPath } = await saveSceneAssets(
-//     scenes,
-//     dirs.assetsDir,
-//     audio_url,
-//     logo_url,
-//   );
-
-//   const updatedScenes = scenesWithAssets.map((scene) => ({
-//     ...scene,
-//     image_filename: scene.image_filename || null,
-//     audio_filename: scene.audio_filename || null,
-//   }));
-
-//   console.log(`📦 [${requestId}] Assets saved successfully`);
-
-//   let clipPaths: string[] = [];
-//   const chosenEffect = effectType || 'zoom_efffect';
-
-//   console.log(`🎨 [${requestId}] Applying effect: ${chosenEffect}`);
-
-//   switch (chosenEffect) {
-//     case 'zoom_efffect':
-//       clipPaths = await zoom_effectAd(
-//         updatedScenes,
-//         dirs,
-//         runFfmpeg,
-//         fps,
-//         overlayTemplates,
-//         'zoom_effect',
-//         logoPath,
-//       );
-//       break;
-
-//     case 'card_motion':
-//       clipPaths = await card_motion_effectAd(
-//         updatedScenes,
-//         dirs,
-//         runFfmpeg,
-//         fps,
-//         overlayTemplates,
-//         'card_motion',
-//         logoPath,
-//       );
-//       break;
-
-//     case 'basic':
-//       clipPaths = await simple_video_effect(
-//         updatedScenes,
-//         dirs,
-//         runFfmpeg,
-//         fps,
-//         overlayTemplates,
-//         'basic',
-//         logoPath,
-//       );
-//       break;
-
-//     case 'cycle':
-//       clipPaths = await cycling_effects_video(
-//         updatedScenes,
-//         dirs,
-//         runFfmpeg,
-//         fps,
-//         overlayTemplates,
-//         'cycle',
-//         logoPath,
-//       )
-
-//     default:
-//       throw new Error(`Unknown effect type: ${chosenEffect}`);
-//   }
-
-//   console.log(`🎞️ [${requestId}] Generated ${clipPaths.length} clips`);
-
-//   const listFile = path.join(dirs.outputDir, `concat_list_${Date.now()}.txt`);
-//   const listContent = clipPaths
-//     .map((p) => `file '${escapePath(p)}'`)
-//     .join('\n');
-//   fs.writeFileSync(listFile, listContent);
-
-//   console.log(`📝 [${requestId}] Concat list created`);
-
-//   const finalVideoPath = path.join(
-//     dirs.outputDir,
-//     `final_${chosenEffect}_${Date.now()}.mp4`,
-//   );
-//   // const audioPath = path.join(dirs.audioDir, 'full_audio.wav');
-//   // const audioPath =path.join(dirs.assetsDir,'audio','full_audio.wav')
-//   const audioPath =path.join(dirs.globalAudioDir,'full_audio.wav');
-
-//   console.log("Audio Path=📝📝 📝 📝 📝 📝 📝 📝 📝 📝 📝 📝 ",audioPath)
-
-//   // console.log(`🎵 [${requestId}] Merging video and audio...`);
-
-//   // await runFfmpeg([
-//   //   '-y',
-//   //   '-f',
-//   //   'concat',
-//   //   '-safe',
-//   //   '0',
-//   //   '-i',
-//   //   escapePath(listFile),
-//   //   '-i',
-//   //   escapePath(audioPath),
-//   //   '-c:v',
-//   //   'copy',
-//   //   '-c:a',
-//   //   'aac',
-//   //   '-b:a',
-//   //   '192k',
-//   //   '-ac',
-//   //   '2',
-//   //   '-ar',
-//   //   '48000',
-//   //   '-filter:a',
-//   //   'volume=5',
-//   //   '-map',
-//   //   '0:v:0',
-//   //   '-map',
-//   //   '1:a:0',
-//   //   '-shortest',
-//   //   escapePath(finalVideoPath),
-//   // ]);
-
-// console.log(`🎵 [${requestId}] Merging video, narration & background music...`);
-
-// const backgroundMusicPath = path.join(dirs.musicDir, 'back-music.mp3');
-
-
-//  console.log("backgroundMusicPath Path=",backgroundMusicPath)
-
-// // check if bg music exists
-// if (!fs.existsSync(backgroundMusicPath)) {
-//   console.warn(`⚠️ [${requestId}] Background music not found: ${backgroundMusicPath}`);
-// }
-
-// // Mix main audio + background music (reduce bg volume)
-// await runFfmpeg([
-//   '-y',
-//   '-f',
-//   'concat',
-//   '-safe',
-//   '0',
-//   '-i',
-//   escapePath(listFile),
-//   '-i',
-//   escapePath(audioPath), // main narration audio
-//   '-i',
-//   escapePath(backgroundMusicPath), // background track
-//   '-filter_complex',
-//   // ↓ Mix both audios: a= narration, b= background (quieter)
-//   "[1:a]volume=1.0[a1]; [2:a]volume=0.05[a2]; [a1][a2]amix=inputs=2:duration=longest:dropout_transition=3[aout]",
-//   '-map',
-//   '0:v:0',
-//   '-map',
-//   '[aout]',
-//   '-c:v',
-//   'copy',
-//   '-c:a',
-//   'aac',
-//   '-b:a',
-//   '192k',
-//   '-shortest',
-//   escapePath(finalVideoPath),
-// ]);
-
-
-
-
-
-
-//   fs.unlinkSync(listFile);
-
-//   console.log(`✅ [${requestId}] Video build complete: ${finalVideoPath}`);
-
-//   return {
-//     requestId,
-//     chosenEffect,
-//     finalVideo: finalVideoPath,
-//     stats: {
-//       totalClips: clipPaths.length,
-//       videoSize: fs.statSync(finalVideoPath).size,
-//     },
-//   };
-// }
-// buildVideoWorker(workerData as WorkerData)
-//   .then((result) => parentPort?.postMessage(result))
-//   .catch((err) => {
-//     console.error(`❌ [${workerData.requestId}] Worker error:`, err);
-//     parentPort?.postMessage({ error: err.message });
-//   });
-
 import { parentPort, workerData } from 'worker_threads';
 import * as path from 'path';
 import * as fs from 'fs';
 import { saveSceneAssets, Scene } from 'src/utils/saveSceneImages';
-
 import { runFfmpeg } from 'src/utils/ffmpeg.utils';
 import { overlayTemplates } from 'src/utils/overlayStyles';
 import { card_motion_effectAd } from 'src/efffects/cardMotioneffects';
 import { simple_video_effect } from 'src/efffects/basic.effects';
 import { zoom_effectAd } from 'src/efffects/zoom_effect';
 import { cycling_effects_video } from 'src/efffects/cycling.effect';
+
 
 interface WorkerData {
   requestId: string;
@@ -291,7 +39,7 @@ function escapePath(p: string): string {
 }
 
 function validateDirectories(dirs: WorkerData['dirs'], requestId: string): void {
-  console.log(`\n📁 [${requestId}] Validating directories...`);
+  console.log(`\n [${requestId}] Validating directories...`);
   
   const requiredDirs = [
     'requestDir',
@@ -333,13 +81,13 @@ function validateDirectories(dirs: WorkerData['dirs'], requestId: string): void 
 async function validateAudioFile(audioPath: string, requestId: string, fileType: string = 'audio'): Promise<boolean> {
   try {
     if (!fs.existsSync(audioPath)) {
-      console.warn(`⚠️  [${requestId}] ${fileType} file not found: ${audioPath}`);
+      console.warn(`  [${requestId}] ${fileType} file not found: ${audioPath}`);
       return false;
     }
 
     const stats = fs.statSync(audioPath);
     if (stats.size === 0) {
-      console.warn(`⚠️  [${requestId}] ${fileType} file is empty: ${audioPath}`);
+      console.warn(`  [${requestId}] ${fileType} file is empty: ${audioPath}`);
       return false;
     }
 
@@ -366,10 +114,10 @@ async function buildVideoWorker(data: WorkerData) {
     if (!scenes || scenes.length === 0) {
       throw new Error('No scenes provided');
     }
-    console.log(`📊 [${requestId}] Processing ${scenes.length} scenes`);
+    console.log(` [${requestId}] Processing ${scenes.length} scenes`);
 
     // Save scene assets
-    console.log(`\n📦 [${requestId}] Downloading and saving assets...`);
+    console.log(`\n [${requestId}] Downloading and saving assets...`);
     let scenesWithAssets: Scene[];
     let logoPath: string | undefined;
     let backgroundMusicPath: string | undefined;
@@ -408,7 +156,7 @@ async function buildVideoWorker(data: WorkerData) {
 
     try {
       switch (chosenEffect) {
-        case 'zoom_efffect':
+        case 'zoom_effect':
           clipPaths = await zoom_effectAd(
             updatedScenes,
             dirs,
@@ -417,7 +165,7 @@ async function buildVideoWorker(data: WorkerData) {
             overlayTemplates,
             'zoom_effect',
             logoPath,
-          );
+          )
           break;
 
         case 'card_motion':
@@ -455,6 +203,7 @@ async function buildVideoWorker(data: WorkerData) {
             logoPath,
           );
           break;
+
 
         default:
           throw new Error(`Unknown effect type: ${chosenEffect}`);
@@ -494,8 +243,12 @@ async function buildVideoWorker(data: WorkerData) {
     }
 
     // Validate audio files - use dynamic paths
-    const audioPath = path.join(dirs.audioDir, 'full_audio.wav');
-    const musicPath = backgroundMusicPath || path.join(dirs.musicDir, 'back-music.mp3');
+    // const audioPath = path.join(dirs.audioDir, 'full_audio.wav');
+    const audioPath = 'C:\\Users\\LalitBagora\\Desktop\\template\\backend\\assets\\audio\\full_audio.wav';
+    console.log("audioPath=====",audioPath)
+
+    // const musicPath = backgroundMusicPath || path.join(dirs.musicDir, 'back-music.mp3');
+    const musicPath = 'C:\\Users\\LalitBagora\\Desktop\\template\\backend\\assets\\audio\\back_audio.wav'
 
     console.log(`\n🎵 [${requestId}] Validating audio files...`);
     console.log(`   Main audio: ${audioPath}`);

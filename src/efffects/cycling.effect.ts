@@ -436,7 +436,17 @@ export async function cycling_effects_video(
   console.log(`\n✅ Aspect ratio selected: ${smallestAspectRatio}`);
   console.log(`🏷️  Logo provided: ${logoPath ? 'Yes' : 'No'}\n`);
 
-  const stylePattern = ['Default', 'Default', 'Highlight', 'Highlight', 'Highlight'];
+// Line ~253 pe - Effect ke saath style match
+const stylePattern = [
+  'Default',              // 0: zoom_in → White + Orange karaoke
+  'Highlight',            // 1: zoom_out → Yellow + Cyan box
+  'CenterBox',            // 2: wipe_left → White + Magenta (center)
+  'LeftOverlay',          // 3: white_box → White + Green (left)
+  'LeftOverlayHighlight', // 4: zoom_out → Orange + Red (left)
+  'SimpleBlue',           // 5: zoom_out → Cyan + Blue
+  'CenterBoxHighlight',   // 6: wipe_right → Pink + Purple box
+  'LeftYellow'            // 7: white_box → Yellow + Orange (left)
+];
   let styleIndex = 0;
 
   // Effect cycle pattern
@@ -675,27 +685,50 @@ case 'zoom_out': {
   console.log(`       📹 Zoom Out (1.25 → 1.0) - Smooth & Clear`);
   break;
 }
+// case 'wipe_left': {
+//   // Image static, black layer slides off LEFT (right→left movement)
+//   const wipeDuration = clipDuration / 2; // Wipe speed
+  
+//   baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
+//     `[base][black]overlay=x='if(lt(t,${wipeDuration}),-W*t/${wipeDuration},W)':y=0`;
+  
+//   console.log(`       🔄 Wipe Left - Black slides LEFT (R→L), reveals from right`);
+//   break;
+// }
+
+// case 'wipe_right': {
+//   // Image static, black layer slides off RIGHT (left→right movement) - OPPOSITE
+//   const wipeDuration = clipDuration / 2; // Wipe speed
+  
+//   baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
+//     `[base][black]overlay=x='if(lt(t,${wipeDuration}),W*t/${wipeDuration},-W)':y=0`;
+  
+//   console.log(`       🔄 Wipe Right - Black slides RIGHT (L→R), reveals from left`);
+//   break;
+// }
+
 case 'wipe_left': {
-  // Image static, black layer slides off LEFT (right→left movement)
-  const wipeDuration = clipDuration / 2; // Wipe speed
+  // Black layer slides LEFT (R→L)
+  const wipeDuration = Math.min(clipDuration / 4, 1.5); // faster wipe (max 1.5s)
   
   baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
     `[base][black]overlay=x='if(lt(t,${wipeDuration}),-W*t/${wipeDuration},W)':y=0`;
   
-  console.log(`       🔄 Wipe Left - Black slides LEFT (R→L), reveals from right`);
+  console.log(`🔄 Wipe Left - Faster speed (${wipeDuration}s)`);
   break;
 }
 
 case 'wipe_right': {
-  // Image static, black layer slides off RIGHT (left→right movement) - OPPOSITE
-  const wipeDuration = clipDuration / 2; // Wipe speed
+  // Black layer slides RIGHT (L→R)
+  const wipeDuration = Math.min(clipDuration / 4, 1.5);
   
   baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
     `[base][black]overlay=x='if(lt(t,${wipeDuration}),W*t/${wipeDuration},-W)':y=0`;
   
-  console.log(`       🔄 Wipe Right - Black slides RIGHT (L→R), reveals from left`);
+  console.log(`🔄 Wipe Right - Faster speed (${wipeDuration}s)`);
   break;
 }
+
 
   case 'white_box': {
     // FIXED: 40% width box positioned at LEFT side (x=0)

@@ -1,0 +1,21 @@
+[Script Info]
+Title: Clip_scene8_Karaoke_Chunks
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+Collisions: Normal
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: LeftYellow,Cooper Black,48,&H0000FFFF,&H0000CCFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,2,4,30,500,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.32,LeftYellow,,0,0,0,,{\c&H0000CCFF}Act{\c&H0000FFFF} now and embrace the lifestyle
+Dialogue: 0,0:00:00.32,0:00:00.62,LeftYellow,,0,0,0,,Act {\c&H0000CCFF}now{\c&H0000FFFF} and embrace the lifestyle
+Dialogue: 0,0:00:00.62,0:00:00.84,LeftYellow,,0,0,0,,Act now {\c&H0000CCFF}and{\c&H0000FFFF} embrace the lifestyle
+Dialogue: 0,0:00:00.84,0:00:01.20,LeftYellow,,0,0,0,,Act now and {\c&H0000CCFF}embrace{\c&H0000FFFF} the lifestyle
+Dialogue: 0,0:00:01.20,0:00:01.50,LeftYellow,,0,0,0,,Act now and embrace {\c&H0000CCFF}the{\c&H0000FFFF} lifestyle
+Dialogue: 0,0:00:01.50,0:00:02.18,LeftYellow,,0,0,0,,Act now and embrace the {\c&H0000CCFF}lifestyle{\c&H0000FFFF}
+Dialogue: 0,0:00:02.18,0:00:02.64,LeftYellow,,0,0,0,,{\c&H0000CCFF}you{\c&H0000FFFF} deserve.
+Dialogue: 0,0:00:02.64,0:00:03.00,LeftYellow,,0,0,0,,you {\c&H0000CCFF}deserve.{\c&H0000FFFF}
