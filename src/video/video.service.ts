@@ -118,6 +118,7 @@ export class VideoService {
       audioDir: path.join(assetsDir, 'audio'),
       videosDir: path.join(assetsDir, 'videos'),
       logoDir: path.join(assetsDir, 'logo'),
+      avatarDir: path.join(assetsDir,'avatar'),
       musicDir: path.join(assetsDir, 'music'),
       clipsDir: path.join(assetsDir, 'clips'),
       assDir: path.join(assetsDir, 'ass'),
@@ -142,6 +143,7 @@ export class VideoService {
     effectType?: string,
     audio_url?: string,
     logo_url?: string,
+    avatar_url?:string,
     background_music_url?: string,
   ): Promise<{
     success: boolean;
@@ -182,6 +184,7 @@ export class VideoService {
             effectType: effectType || 'zoom_effect',
             audio_url,
             logo_url,
+            avatar_url,
             background_music_url,
             fps: this.fps,
             dirs,
@@ -235,7 +238,7 @@ export class VideoService {
   async validateVideoFile(filePath: string): Promise<boolean> {
     try {
       if (!fs.existsSync(filePath)) {
-        console.warn(`⚠️ Video file not found: ${filePath}`);
+        console.warn(`Video file not found: ${filePath}`);
         return false;
       }
 
@@ -247,7 +250,7 @@ export class VideoService {
         return false;
       }
 
-      console.log(`✅ Video file valid: ${sizeInMB.toFixed(2)} MB`);
+      console.log(`Video file valid: ${sizeInMB.toFixed(2)} MB`);
       return true;
     } catch (error) {
       console.error('Error validating video:', error);
@@ -278,12 +281,12 @@ export class VideoService {
       const requestDir = path.join(this.rootTempDir, requestId);
       
       if (!fs.existsSync(requestDir)) {
-        console.warn(`⚠️ Request directory not found: ${requestId}`);
+        console.warn(` Request directory not found: ${requestId}`);
         return false;
       }
 
       fs.rmSync(requestDir, { recursive: true, force: true });
-      console.log(`🧹 Cleaned up request: ${requestId}`);
+      console.log(` Cleaned up request: ${requestId}`);
       this.activeRequests.delete(requestId);
       return true;
     } catch (error) {
@@ -317,11 +320,11 @@ export class VideoService {
           fs.rmSync(requestDir, { recursive: true, force: true });
           this.activeRequests.delete(requestId);
           deletedCount++;
-          console.log(`🧹 Deleted old request: ${requestId}`);
+          console.log(` Deleted old request: ${requestId}`);
         }
       }
 
-      console.log(`🧹 Cleaned up ${deletedCount} old request folders`);
+      console.log(`Cleaned up ${deletedCount} old request folders`);
       return deletedCount;
     } catch (error) {
       console.error('Error cleaning up old files:', error);

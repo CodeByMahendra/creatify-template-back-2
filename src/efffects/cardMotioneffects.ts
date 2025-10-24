@@ -185,8 +185,8 @@ export async function card_motion_effectAd(
     }
   }
 
-  console.log(`\n✅ Aspect ratio selected: ${smallestAspectRatio}`);
-  console.log(`🏷️  Logo provided: ${logoPath ? 'Yes' : 'No'}\n`);
+  console.log(`\n Aspect ratio selected: ${smallestAspectRatio}`);
+  console.log(`  Logo provided: ${logoPath ? 'Yes' : 'No'}\n`);
 
   const stylePattern = ['Default', 'Default', 'Highlight', 'Highlight', 'Highlight'];
   let styleIndex = 0;
@@ -235,7 +235,7 @@ export async function card_motion_effectAd(
       gapAfter = nextStart - currentEnd;
       
       if (gapAfter > 0.01) {
-        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+        console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id})`);
         console.log(`    Gap detected: ${gapAfter.toFixed(2)}s after this scene`);
         console.log(`    Original duration: ${audio_duration.toFixed(2)}s`);
         
@@ -243,15 +243,15 @@ export async function card_motion_effectAd(
         console.log(`    Extended duration: ${clipDuration.toFixed(2)}s (includes gap)`);
       } else {
         clipDuration = audio_duration || (end_time - start_time) || 0;
-        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+        console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id})`);
         console.log(`    Duration: ${clipDuration.toFixed(2)}s (no gap)`);
       }
     } else {
       clipDuration = audio_duration || (end_time - start_time) || 0;
-      console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE`);
+      console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE`);
       console.log(`    Duration: ${clipDuration.toFixed(2)}s`);
       if (logoPath) {
-        console.log(`    🏷️  Will show blur background + logo + karaoke text (no card)`);
+        console.log(`      Will show blur background + logo + karaoke text (no card)`);
       }
     }
 
@@ -266,7 +266,7 @@ export async function card_motion_effectAd(
     console.log(`    Resolution: ${width}x${height}`);
     console.log(`    Card size: ${cardWidth}x${cardHeight}`);
     console.log(`    Corner radius: ${cornerRadius}px`);
-    console.log(`    ✅ ASPECT RATIO MAINTAINED`);
+    console.log(`     ASPECT RATIO MAINTAINED`);
 
     const textStyle = stylePattern[styleIndex];
     styleIndex = (styleIndex + 1) % stylePattern.length;
@@ -312,7 +312,7 @@ export async function card_motion_effectAd(
       }
 
       if (fs.existsSync(inputPath)) {
-        console.log(`    🔧 Preparing image for card effect...`);
+        console.log(`     Preparing image for card effect...`);
         const resizedBuffer = await loadAndResizeImage(inputPath, width, height);
         const resizedPath = path.join(dirs.resizedDir, `resized_${chunk_id}.jpg`);
         
@@ -326,10 +326,10 @@ export async function card_motion_effectAd(
           .jpeg()
           .toFile(resizedPath);
         inputPath = resizedPath;
-        console.log(`    ✅ Image prepared: ${resizedPath}`);
+        console.log(`     Image prepared: ${resizedPath}`);
       }
     } else {
-      console.log(`    ⚫ Creating black frame`);
+      console.log(`     Creating black frame`);
       const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
       if (!fs.existsSync(blackPath)) {
         await sharp(createBlackFrame(width, height), {
@@ -354,7 +354,7 @@ export async function card_motion_effectAd(
 
     // For last clip with logo: show blur background + logo + karaoke text (no card)
     if (isLastClip && logoPath && fs.existsSync(logoPath)) {
-      console.log(`    🎨 Last clip: Creating blur background + logo + karaoke text`);
+      console.log(`     Last clip: Creating blur background + logo + karaoke text`);
       
       if (isVideo) {
         args.push('-i', inputPath);
@@ -376,14 +376,14 @@ export async function card_motion_effectAd(
         // Blur background + logo (base layer for text overlay)
         filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]scale=w=min(iw\\,${Math.floor(width * 0.4)}):h=min(ih\\,${Math.floor(height * 0.4)}):force_original_aspect_ratio=decrease[logo];[blurred][logo]overlay=(W-w)/2:(H-h)/2[vbase]`;
         
-        console.log(`    ✅ Logo overlay added to blur background`);
+        console.log(`     Logo overlay added to blur background`);
       }
     } 
     // For other clips: show card with motion
     else {
       if (isVideo) {
         // Video processing with aspect ratio maintained
-        console.log(`    🎥 Processing video with rounded card (ASPECT RATIO MAINTAINED)...`);
+        console.log(`     Processing video with rounded card (ASPECT RATIO MAINTAINED)...`);
         args.push('-i', inputPath);
         
         // Use simplified filter that maintains aspect ratio
@@ -394,9 +394,9 @@ export async function card_motion_effectAd(
         args.push('-loop', '1', '-i', inputPath);
         
         const cardPath = path.join(dirs.resizedDir, `card_${chunk_id}.png`);
-        console.log(`    🎴 Creating rounded card with ${cornerRadius}px corners (ASPECT RATIO MAINTAINED)...`);
+        console.log(`     Creating rounded card with ${cornerRadius}px corners (ASPECT RATIO MAINTAINED)...`);
         await createRoundedCard(inputPath, width, height, cornerRadius, cardPath);
-        console.log(`    ✅ Rounded card created`);
+        console.log(`     Rounded card created`);
 
         args.push('-loop', '1', '-i', cardPath);
 
@@ -425,13 +425,13 @@ export async function card_motion_effectAd(
         };
       });
 
-      console.log(`    🎵 Karaoke timings (5-6 words chunks):`);
+      console.log(`     Karaoke timings (5-6 words chunks):`);
       relativeWords.forEach((w: any, idx: number) => {
         console.log(`       ${idx + 1}. "${w.word}" → ${w.start.toFixed(2)}s to ${w.end.toFixed(2)}s`);
       });
       
       if (gapAfter > 0.01) {
-        console.log(`    ⏸️  Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
+        console.log(`      Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
       }
 
       const assFile = generateAssWithKaraoke(
@@ -480,9 +480,9 @@ export async function card_motion_effectAd(
       clipPath
     );
 
-    console.log(`    🎬 Running FFmpeg with ${isVideo ? 'video' : 'image'} card motion effect...`);
+    console.log(`     Running FFmpeg with ${isVideo ? 'video' : 'image'} card motion effect...`);
     await runFfmpeg(args);
-    console.log(`    ✅ Video clip created: ${clipPath}`);
+    console.log(`     Video clip created: ${clipPath}`);
   }
 
   const finalDuration = scenes.reduce((sum, s, idx) => {
@@ -498,21 +498,21 @@ export async function card_motion_effectAd(
   }, 0);
 
   console.log(`\n🎉 All scenes processed with card motion effect!`);
-  console.log(`📊 Total clips created: ${clipPaths.length}`);
-  console.log(`📊 Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
-  console.log(`📊 Calculated duration: ${finalDuration.toFixed(2)}s`);
-  console.log(`🎴 Effect: Blur background + 75% card with ${cornerRadius}px rounded corners`);
-  console.log(`✅ ASPECT RATIO: FULLY MAINTAINED for both images and videos`);
-  console.log(`🎬 Animation: Slide in from left → Instant disappear from center`);
-  console.log(`🎥 Video Support: Videos maintain aspect ratio with black padding`);
+  console.log(` Total clips created: ${clipPaths.length}`);
+  console.log(` Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
+  console.log(` Calculated duration: ${finalDuration.toFixed(2)}s`);
+  console.log(` Effect: Blur background + 75% card with ${cornerRadius}px rounded corners`);
+  console.log(` ASPECT RATIO: FULLY MAINTAINED for both images and videos`);
+  console.log(` Animation: Slide in from left → Instant disappear from center`);
+  console.log(` Video Support: Videos maintain aspect ratio with black padding`);
   if (logoPath) {
-    console.log(`🏷️  Last clip: Blur background + logo + karaoke text (no card)`);
+    console.log(`  Last clip: Blur background + logo + karaoke text (no card)`);
   } else {
-    console.log(`🏷️  No logo: All clips show card with animation`);
+    console.log(`  No logo: All clips show card with animation`);
   }
-  console.log(`📁 Clips saved to: ${dirs.clipsDir}`);
-  console.log(`📁 ASS files saved to: ${dirs.assDir}`);
-  console.log(`📁 Resized files saved to: ${dirs.resizedDir}\n`);
+  console.log(` Clips saved to: ${dirs.clipsDir}`);
+  console.log(` ASS files saved to: ${dirs.assDir}`);
+  console.log(` Resized files saved to: ${dirs.resizedDir}\n`);
   
   return clipPaths;
 }

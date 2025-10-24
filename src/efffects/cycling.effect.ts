@@ -433,19 +433,19 @@ export async function cycling_effects_video(
     }
   }
 
-  console.log(`\n✅ Aspect ratio selected: ${smallestAspectRatio}`);
-  console.log(`🏷️  Logo provided: ${logoPath ? 'Yes' : 'No'}\n`);
+  console.log(`\n Aspect ratio selected: ${smallestAspectRatio}`);
+  console.log(`  Logo provided: ${logoPath ? 'Yes' : 'No'}\n`);
 
 // Line ~253 pe - Effect ke saath style match
 const stylePattern = [
   'Default',              // 0: zoom_in → White + Orange karaoke
   'Highlight',            // 1: zoom_out → Yellow + Cyan box
-  'CenterBox',            // 2: wipe_left → White + Magenta (center)
-  'LeftOverlay',          // 3: white_box → White + Green (left)
-  'LeftOverlayHighlight', // 4: zoom_out → Orange + Red (left)
-  'SimpleBlue',           // 5: zoom_out → Cyan + Blue
-  'CenterBoxHighlight',   // 6: wipe_right → Pink + Purple box
-  'LeftYellow'            // 7: white_box → Yellow + Orange (left)
+  'LeftOverlay',            
+  'CenterBox',         
+  'LeftOverlayHighlight', 
+  'Highlight',          
+  'CenterBoxHighlight',   
+  'CenterBox'           
 ];
   let styleIndex = 0;
 
@@ -462,7 +462,7 @@ const stylePattern = [
   ];
 
   console.log('====== PROCESSING SCENES WITH CYCLING EFFECTS ======');
-  console.log(`🔄 Effect cycle: ${effectCycle.join(' → ')}\n`);
+  console.log(` Effect cycle: ${effectCycle.join(' → ')}\n`);
 
   const totalExpectedDuration = scenes.length > 0 
     ? Math.max(...scenes.map(s => s.end_time || 0))
@@ -507,7 +507,7 @@ const stylePattern = [
       gapAfter = nextStart - currentEnd;
       
       if (gapAfter > 0.01) {
-        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - Effect: ${currentEffect.toUpperCase()}`);
+        console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id}) - Effect: ${currentEffect.toUpperCase()}`);
         console.log(`    Gap detected: ${gapAfter.toFixed(2)}s after this scene`);
         console.log(`    Original duration: ${audio_duration.toFixed(2)}s`);
         
@@ -515,15 +515,15 @@ const stylePattern = [
         console.log(`    Extended duration: ${clipDuration.toFixed(2)}s (includes gap)`);
       } else {
         clipDuration = audio_duration || (end_time - start_time) || 0;
-        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - Effect: ${currentEffect.toUpperCase()}`);
+        console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id}) - Effect: ${currentEffect.toUpperCase()}`);
         console.log(`    Duration: ${clipDuration.toFixed(2)}s (no gap)`);
       }
     } else {
       clipDuration = audio_duration || (end_time - start_time) || 0;
-      console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE (Blur + Logo)`);
+      console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE (Blur + Logo)`);
       console.log(`    Duration: ${clipDuration.toFixed(2)}s`);
       if (logoPath) {
-        console.log(`    🏷️  Will show blur background + logo + karaoke text`);
+        console.log(`      Will show blur background + logo + karaoke text`);
       }
     }
 
@@ -551,7 +551,7 @@ const stylePattern = [
     } else if (image_filename) {
       if (image_filename.startsWith('http')) {
         try {
-          console.log(`    📥 Downloading image...`);
+          console.log(`     Downloading image...`);
           const response = await axios.get(image_filename, {
             responseType: 'arraybuffer',
           });
@@ -559,7 +559,7 @@ const stylePattern = [
           const tempPath = path.join(dirs.tempDir, `downloaded_${chunk_id}.jpg`);
           fs.writeFileSync(tempPath, buffer);
           inputPath = tempPath;
-          console.log(`    ✅ Downloaded (${buffer.length} bytes)`);
+          console.log(`     Downloaded (${buffer.length} bytes)`);
         } catch (err) {
           console.warn(`    ⚠️  Download failed, using black frame`);
           const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
@@ -580,7 +580,7 @@ const stylePattern = [
 
       // Resize image to fit canvas
       if (fs.existsSync(inputPath)) {
-        console.log(`    🔧 Resizing image to ${width}x${height}...`);
+        console.log(`     Resizing image to ${width}x${height}...`);
         const resizedBuffer = await loadAndResizeImage(inputPath, width, height);
         const resizedPath = path.join(dirs.resizedDir, `resized_${chunk_id}.jpg`);
         
@@ -594,10 +594,10 @@ const stylePattern = [
           .jpeg()
           .toFile(resizedPath);
         inputPath = resizedPath;
-        console.log(`    ✅ Image resized: ${resizedPath}`);
+        console.log(`     Image resized: ${resizedPath}`);
       }
     } else {
-      console.log(`    ⚫ Creating black frame`);
+      console.log(`     Creating black frame`);
       const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
       if (!fs.existsSync(blackPath)) {
         await sharp(createBlackFrame(width, height), {
@@ -628,7 +628,7 @@ const stylePattern = [
 
     // Last clip: blur background + logo + karaoke
     if (isLastClip && logoPath && fs.existsSync(logoPath)) {
-      console.log(`    🎨 Applying: BLUR + LOGO overlay`);
+      console.log(`    Applying: BLUR + LOGO overlay`);
       
       const resizedLogoPath = await resizeLogoWithAspectRatio(
         logoPath,
@@ -658,74 +658,64 @@ const stylePattern = [
       
       // Apply effect based on cycle
    switch (currentEffect) {
+// case 'zoom_in': {
+
+//   const totalFrames = Math.ceil(clipDuration * fps);
+
+//   baseFilter += `,scale=${width*2}:${height*2}:flags=lanczos,` +
+//     `zoompan=z='min(1.25,1+0.25*on/${totalFrames})':d=${totalFrames}:` +
+//     `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+//     `s=${width}x${height}:fps=${fps}`;
+  
+//   console.log(`        Zoom In (1.0 → 1.25) - Smooth & Clear`);
+//   break;
+// }
+
+// case 'zoom_out': {
+
+//   const totalFrames = Math.ceil(clipDuration * fps);
+  
+
+//   baseFilter += `,scale=${width*2}:${height*2}:flags=lanczos,` +
+//     `zoompan=z='max(1.0,1.25-0.25*on/${totalFrames})':d=${totalFrames}:` +
+//     `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+//     `s=${width}x${height}:fps=${fps}`;
+  
+//   console.log(`       📹 Zoom Out (1.25 → 1.0) - Smooth & Clear`);
+//   break;
+// }
+
 case 'zoom_in': {
-  // SMOOTH Zoom In - No interp option (not supported in zoompan)
-  const totalFrames = Math.ceil(clipDuration * fps);
-  
-  // Pehle high-quality scale, phir zoompan (without interp)
-  baseFilter += `,scale=${width*2}:${height*2}:flags=lanczos,` +
-    `zoompan=z='min(1.25,1+0.25*on/${totalFrames})':d=${totalFrames}:` +
-    `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
-    `s=${width}x${height}:fps=${fps}`;
-  
-  console.log(`       📹 Zoom In (1.0 → 1.25) - Smooth & Clear`);
-  break;
-}
 
-case 'zoom_out': {
-  // SMOOTH Zoom Out - No interp option (not supported in zoompan)
-  const totalFrames = Math.ceil(clipDuration * fps);
-  
-  // Pehle high-quality scale, phir zoompan (without interp)
-  baseFilter += `,scale=${width*2}:${height*2}:flags=lanczos,` +
-    `zoompan=z='max(1.0,1.25-0.25*on/${totalFrames})':d=${totalFrames}:` +
-    `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
-    `s=${width}x${height}:fps=${fps}`;
-  
-  console.log(`       📹 Zoom Out (1.25 → 1.0) - Smooth & Clear`);
-  break;
-}
-// case 'wipe_left': {
-//   // Image static, black layer slides off LEFT (right→left movement)
-//   const wipeDuration = clipDuration / 2; // Wipe speed
-  
-//   baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
-//     `[base][black]overlay=x='if(lt(t,${wipeDuration}),-W*t/${wipeDuration},W)':y=0`;
-  
-//   console.log(`       🔄 Wipe Left - Black slides LEFT (R→L), reveals from right`);
-//   break;
-// }
+    const totalFrames = Math.ceil(clipDuration * fps);
 
-// case 'wipe_right': {
-//   // Image static, black layer slides off RIGHT (left→right movement) - OPPOSITE
-//   const wipeDuration = clipDuration / 2; // Wipe speed
-  
-//   baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
-//     `[base][black]overlay=x='if(lt(t,${wipeDuration}),W*t/${wipeDuration},-W)':y=0`;
-  
-//   console.log(`       🔄 Wipe Right - Black slides RIGHT (L→R), reveals from left`);
-//   break;
-// }
+    baseFilter += `,scale=${width*2}:${height*2}:flags=lanczos,` +
+      `zoompan=z='1+0.25*on/${totalFrames}':d=1:` +
+      `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+      `s=${width}x${height}:fps=${fps}`;
 
-case 'wipe_left': {
-  // Black layer slides LEFT (R→L)
-  const wipeDuration = Math.min(clipDuration / 4, 1.5); // faster wipe (max 1.5s)
-  
-  baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
-    `[base][black]overlay=x='if(lt(t,${wipeDuration}),-W*t/${wipeDuration},W)':y=0`;
-  
-  console.log(`🔄 Wipe Left - Faster speed (${wipeDuration}s)`);
-  break;
-}
+    console.log(` Zoom In (1.0 → 1.25) - Smooth & Clear`);
+    break;
+  }
+
+  case 'zoom_out': {
+
+    const totalFrames = Math.ceil(clipDuration * fps);
+
+    baseFilter += `,scale=${width*2}:${height*2}:flags=lanczos,` +
+      `zoompan=z='1.25-0.25*on/${totalFrames}':d=1:` +
+      `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+      `s=${width}x${height}:fps=${fps}`;
+
+    console.log(` Zoom Out (1.25 → 1.0) - Smooth & Clear`);
+    break;
+  }
 
 case 'wipe_right': {
-  // Black layer slides RIGHT (L→R)
-  const wipeDuration = Math.min(clipDuration / 4, 1.5);
-  
+  const wipeDuration = 1.3;
   baseFilter += `[base];color=black:s=${width}x${height}:d=${clipDuration}[black];` +
     `[base][black]overlay=x='if(lt(t,${wipeDuration}),W*t/${wipeDuration},-W)':y=0`;
-  
-  console.log(`🔄 Wipe Right - Faster speed (${wipeDuration}s)`);
+  console.log(` Wipe Right - Super fast (${wipeDuration}s)`);
   break;
 }
 
@@ -734,7 +724,7 @@ case 'wipe_right': {
     // FIXED: 40% width box positioned at LEFT side (x=0)
     const boxWidth = Math.floor(width * 0.4);
     baseFilter += `[base];color=white@0.3:s=${boxWidth}x${height}:d=${clipDuration}[box];[base][box]overlay=0:0`;
-    console.log(`       ⬜ White Box (40% width, LEFT positioned, 30% opacity)`);
+    console.log(`        White Box (40% width, LEFT positioned, 30% opacity)`);
     break;
   }
   default:
@@ -763,10 +753,10 @@ case 'wipe_right': {
         };
       });
 
-      console.log(`    🎵 Adding karaoke (${relativeWords.length} words)`);
+      console.log(`     Adding karaoke (${relativeWords.length} words)`);
       
       if (gapAfter > 0.01) {
-        console.log(`    ⏸️  Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
+        console.log(`      Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`);
       }
 
       const assFile = generateAssWithKaraoke(
@@ -784,7 +774,7 @@ case 'wipe_right': {
       filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
       
     } else if (overlayText) {
-      console.log(`    📝 Adding static text`);
+      console.log(`     Adding static text`);
       
       const assFile = generateAssFromTemplate(
         dirs.assDir,
@@ -817,9 +807,9 @@ case 'wipe_right': {
       clipPath
     );
 
-    console.log(`    🎬 Running FFmpeg with ${currentEffect} effect...`);
+    console.log(`     Running FFmpeg with ${currentEffect} effect...`);
     await runFfmpeg(args);
-    console.log(`    ✅ Video clip created: ${clipPath}`);
+    console.log(`     Video clip created: ${clipPath}`);
   }
 
   const finalDuration = scenes.reduce((sum, s, idx) => {
@@ -835,16 +825,16 @@ case 'wipe_right': {
   }, 0);
 
   console.log(`\n🎉 All scenes processed with cycling effects!`);
-  console.log(`📊 Total clips created: ${clipPaths.length}`);
-  console.log(`📊 Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
-  console.log(`📊 Calculated duration: ${finalDuration.toFixed(2)}s`);
-  console.log(`🔄 Effect pattern: ${effectCycle.join(' → ')}`);
-  console.log(`📝 Features: Karaoke text on all clips`);
+  console.log(` Total clips created: ${clipPaths.length}`);
+  console.log(` Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
+  console.log(` Calculated duration: ${finalDuration.toFixed(2)}s`);
+  console.log(` Effect pattern: ${effectCycle.join(' → ')}`);
+  console.log(` Features: Karaoke text on all clips`);
   if (logoPath) {
-    console.log(`🏷️  Last clip: Blur background + centered logo + karaoke`);
+    console.log(`  Last clip: Blur background + centered logo + karaoke`);
   }
-  console.log(`📁 Clips saved to: ${dirs.clipsDir}`);
-  console.log(`📁 ASS files saved to: ${dirs.assDir}`);
+  console.log(` Clips saved to: ${dirs.clipsDir}`);
+  console.log(` ASS files saved to: ${dirs.assDir}`);
   console.log(`📁 Resized files saved to: ${dirs.resizedDir}\n`);
   
   return clipPaths;

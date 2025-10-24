@@ -27,7 +27,6 @@ export async function simple_video_effect(
   let smallestArea = Infinity;
   let smallestAspectRatio = '16:9';
 
-  console.log('\n====== ANALYZING IMAGES ======');
 
   for (const scene of scenes) {
     if (scene.image_filename) {
@@ -46,10 +45,6 @@ export async function simple_video_effect(
 
           if (metadata.width && metadata.height) {
             const area = metadata.width * metadata.height;
-            console.log(
-              `   Size: ${metadata.width}x${metadata.height} (${area} px²)`,
-            );
-
             if (area < smallestArea) {
               smallestArea = area;
               const ratio = metadata.width / metadata.height;
@@ -68,15 +63,11 @@ export async function simple_video_effect(
         }
       } else if (fs.existsSync(imgPath)) {
         try {
-          console.log(` Analyzing: ${scene.chunk_id}`);
+    
           const metadata = await sharp(imgPath).metadata();
 
           if (metadata.width && metadata.height) {
             const area = metadata.width * metadata.height;
-            console.log(
-              `   Size: ${metadata.width}x${metadata.height} (${area} px²)`,
-            );
-
             if (area < smallestArea) {
               smallestArea = area;
               const ratio = metadata.width / metadata.height;
@@ -97,9 +88,6 @@ export async function simple_video_effect(
     }
   }
 
-  console.log(`\n✅ Aspect ratio selected: ${smallestAspectRatio}`);
-  console.log(`🏷️  Logo provided: ${logoPath ? 'Yes' : 'No'}\n`);
-
   const stylePattern = [
     'Default',
     'Default',
@@ -108,9 +96,6 @@ export async function simple_video_effect(
     'Highlight',
   ];
   let styleIndex = 0;
-
-  console.log('====== PROCESSING SCENES (SIMPLE - NO EFFECTS) ======\n');
-
   const totalExpectedDuration =
     scenes.length > 0 ? Math.max(...scenes.map((s) => s.end_time || 0)) : 0;
 
@@ -119,11 +104,6 @@ export async function simple_video_effect(
     0,
   );
 
-  console.log(`Expected total timeline: ${totalExpectedDuration.toFixed(2)}s`);
-  console.log(` Total audio duration: ${totalAudioDuration.toFixed(2)}s`);
-  console.log(
-    ` Gap duration: ${(totalExpectedDuration - totalAudioDuration).toFixed(2)}s\n`,
-  );
 
   const { width, height } = getDimensionsFromAspectRatio(smallestAspectRatio);
 
@@ -154,29 +134,15 @@ export async function simple_video_effect(
       gapAfter = nextStart - currentEnd;
 
       if (gapAfter > 0.01) {
-        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id})`);
-        console.log(
-          `    Gap detected: ${gapAfter.toFixed(2)}s after this scene`,
-        );
-        console.log(`    Original duration: ${audio_duration.toFixed(2)}s`);
-
         clipDuration = audio_duration + gapAfter;
-        console.log(
-          `    Extended duration: ${clipDuration.toFixed(2)}s (includes gap)`,
-        );
       } else {
         clipDuration = audio_duration || end_time - start_time || 0;
-        console.log(`\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id})`);
-        console.log(`    Duration: ${clipDuration.toFixed(2)}s (no gap)`);
+        
       }
     } else {
       clipDuration = audio_duration || end_time - start_time || 0;
-      console.log(
-        `\n🎬 Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE`,
-      );
-      console.log(`    Duration: ${clipDuration.toFixed(2)}s`);
       if (logoPath) {
-        console.log(`    🏷️  Will show blur background + logo`);
+        console.log(` Will show blur background + logo`);
       }
     }
 
@@ -187,13 +153,6 @@ export async function simple_video_effect(
       continue;
     }
 
-    console.log(
-      `    Timeline: ${start_time.toFixed(2)}s → ${end_time.toFixed(2)}s`,
-    );
-    console.log(`    Text: "${overlayText}"`);
-    console.log(`    Words: ${words.length}`);
-    console.log(`    Resolution: ${width}x${height}`);
-    console.log(`    Style: Simple (Direct Image Display)`);
 
     const textStyle = stylePattern[styleIndex];
     styleIndex = (styleIndex + 1) % stylePattern.length;
@@ -205,11 +164,11 @@ export async function simple_video_effect(
       inputPath = path.isAbsolute(video_filename)
         ? video_filename
         : path.join(dirs.imagesDir, video_filename);
-      console.log(`    📹 Video asset`);
+ 
     } else if (image_filename) {
       if (image_filename.startsWith('http')) {
         try {
-          console.log(`    📥 Downloading image...`);
+
           const response = await axios.get(image_filename, {
             responseType: 'arraybuffer',
           });
@@ -220,7 +179,7 @@ export async function simple_video_effect(
           );
           fs.writeFileSync(tempPath, buffer);
           inputPath = tempPath;
-          console.log(`    ✅ Downloaded (${buffer.length} bytes)`);
+
         } catch (err) {
           console.warn(`    ⚠️  Download failed, using black frame`);
           const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
@@ -241,7 +200,6 @@ export async function simple_video_effect(
 
       // Resize image to fit canvas
       if (fs.existsSync(inputPath)) {
-        console.log(`    🔧 Resizing image to ${width}x${height}...`);
         const resizedBuffer = await loadAndResizeImage(
           inputPath,
           width,
@@ -262,10 +220,8 @@ export async function simple_video_effect(
           .jpeg()
           .toFile(resizedPath);
         inputPath = resizedPath;
-        console.log(`    ✅ Image resized: ${resizedPath}`);
       }
     } else {
-      console.log(`    ⚫ Creating black frame`);
       const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
       if (!fs.existsSync(blackPath)) {
         await sharp(createBlackFrame(width, height), {
@@ -296,7 +252,7 @@ export async function simple_video_effect(
 
     // Last clip with logo: blur background + logo overlay + karaoke text
     if (isLastClip && logoPath && fs.existsSync(logoPath)) {
-      console.log(`    🎨 Last clip: Applying blur + logo + karaoke overlay`);
+      console.log(`     Last clip: Applying blur + logo + karaoke overlay`);
 
       const resizedLogoPath = await resizeLogoWithAspectRatio(
         logoPath,
@@ -312,7 +268,6 @@ export async function simple_video_effect(
         // Blur background + logo
         filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,boxblur=20:1[blurred];[1:v]scale=w=min(iw\\,${Math.floor(width * 0.4)}):h=min(ih\\,${Math.floor(height * 0.4)}):force_original_aspect_ratio=decrease[logo];[blurred][logo]overlay=(W-w)/2:(H-h)/2[vbase]`;
 
-        console.log(`    ✅ Logo overlay configured`);
 
         // Add karaoke text on top of blur+logo
         if (overlayText && words.length > 0) {
@@ -332,9 +287,7 @@ export async function simple_video_effect(
             };
           });
 
-          console.log(
-            `    🎵 Adding karaoke to last clip (${relativeWords.length} words)`,
-          );
+  
 
           const assFile = generateAssWithKaraoke(
             dirs.assDir,
@@ -350,7 +303,7 @@ export async function simple_video_effect(
 
           filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
         } else if (overlayText) {
-          console.log(`    📝 Adding static text to last clip`);
+          console.log(`     Adding static text to last clip`);
 
           const assFile = generateAssFromTemplate(
             dirs.assDir,
@@ -368,7 +321,7 @@ export async function simple_video_effect(
           filterComplex = filterComplex.replace('[vbase]', '[vfinal]');
         }
       } else {
-        // Fallback: just scale the image with text
+     
         filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[vbase]`;
 
         if (overlayText) {
@@ -402,12 +355,11 @@ export async function simple_video_effect(
         }
       }
     }
-    // Regular clips: just show image with karaoke text
+   
     else {
-      // Simple scale and pad (no blur, no effects)
+      
       filterComplex = `[0:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[vbase]`;
 
-      // Add karaoke text overlay
       if (overlayText && words.length > 0) {
         const sceneStart = typeof start_time === 'number' ? start_time : 0;
 
@@ -425,11 +377,11 @@ export async function simple_video_effect(
           };
         });
 
-        console.log(`    🎵 Adding karaoke (${relativeWords.length} words)`);
+    
 
         if (gapAfter > 0.01) {
           console.log(
-            `    ⏸️  Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`,
+            `      Silent period: ${audio_duration.toFixed(2)}s to ${clipDuration.toFixed(2)}s`,
           );
         }
 
@@ -447,7 +399,7 @@ export async function simple_video_effect(
 
         filterComplex += `;[vbase]ass=filename='${escapeFfmpegPath(assFile)}'[vfinal]`;
       } else if (overlayText) {
-        console.log(`    📝 Adding static text overlay`);
+    
 
         const assFile = generateAssFromTemplate(
           dirs.assDir,
@@ -481,9 +433,8 @@ export async function simple_video_effect(
       clipPath,
     );
 
-    console.log(`    🎬 Running FFmpeg (simple mode)...`);
     await runFfmpeg(args);
-    console.log(`    ✅ Video clip created: ${clipPath}`);
+  
   }
 
   const finalDuration = scenes.reduce((sum, s, idx) => {
@@ -498,21 +449,25 @@ export async function simple_video_effect(
     return sum + dur;
   }, 0);
 
-  console.log(`\n🎉 All scenes processed (simple mode)!`);
-  console.log(`📊 Total clips created: ${clipPaths.length}`);
-  console.log(`📊 Expected duration: ${totalExpectedDuration.toFixed(2)}s`);
-  console.log(`📊 Calculated duration: ${finalDuration.toFixed(2)}s`);
-  console.log(`🎴 Style: Direct image display (no card/blur effects)`);
-  console.log(`📝 Features: Karaoke text + Resized images`);
+  
   if (logoPath) {
-    console.log(`🏷️  Last clip: Blur background + centered logo`);
+    console.log(`  Last clip: Blur background + centered logo`);
   }
-  console.log(`📁 Clips saved to: ${dirs.clipsDir}`);
-  console.log(`📁 ASS files saved to: ${dirs.assDir}`);
-  console.log(`📁 Resized files saved to: ${dirs.resizedDir}\n`);
 
   return clipPaths;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 // import * as path from 'path';
 // import * as fs from 'fs';

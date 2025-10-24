@@ -324,7 +324,7 @@ export async function resizeLogoWithAspectRatio(
 ): Promise<string> {
   try {
     if (!fs.existsSync(logoPath)) {
-      console.warn(`   ⚠️  Logo not found: ${logoPath}`);
+      console.warn(`     Logo not found: ${logoPath}`);
       return '';
     }
 
@@ -336,8 +336,8 @@ export async function resizeLogoWithAspectRatio(
     const newWidth = Math.round(logoWidth * scale);
     const newHeight = Math.round(logoHeight * scale);
 
-    console.log(`   📏 Logo original: ${logoWidth}x${logoHeight}`);
-    console.log(`   📏 Logo resized: ${newWidth}x${newHeight}`);
+    console.log(`   Logo original: ${logoWidth}x${logoHeight}`);
+    console.log(`   Logo resized: ${newWidth}x${newHeight}`);
 
     if (!fs.existsSync(resizedDir)) {
       fs.mkdirSync(resizedDir, { recursive: true });
@@ -353,7 +353,7 @@ export async function resizeLogoWithAspectRatio(
       .png()
       .toFile(resizedLogoPath);
 
-    console.log(`   ✅ Logo saved to: ${resizedLogoPath}`);
+    console.log(`    Logo saved to: ${resizedLogoPath}`);
     return resizedLogoPath;
   } catch (err) {
     console.error('   ❌ Error resizing logo:', err);

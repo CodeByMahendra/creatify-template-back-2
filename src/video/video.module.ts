@@ -11,4 +11,4 @@ import { ConfigModule } from '@nestjs/config';
 controllers: [VideoController],
 providers: [VideoService],
 })
-export class VideoModule {}
+export class VideoModule{}

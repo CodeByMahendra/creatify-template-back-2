@@ -26,7 +26,8 @@ interface ScenePayload {
 interface RenderPayload {
   effectType?: string;  // Optional 
   audio_url: string;     // Required
-  logo_url?: string;     // Optional
+  logo_url?: string;
+    avatar_url?: string;     // Optional
   background_music_url?: string;  // Optional
   scenes: ScenePayload[];
 }
@@ -58,7 +59,8 @@ export class VideoController {
         payload.effectType,
         payload.audio_url,
         payload.logo_url,
-        payload.background_music_url
+        payload.background_music_url,
+        payload.avatar_url
       );
 
       return {

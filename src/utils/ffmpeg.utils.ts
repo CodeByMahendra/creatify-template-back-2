@@ -15,7 +15,7 @@ export function escapeFfmpegPath(filePath: string, isListFile = false): string {
 
 export function runFfmpeg(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    console.log('🎬 Running FFmpeg:\n', args.join(' '));
+    console.log(' Running FFmpeg:\n', args.join(' '));
 
     const ff = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
@@ -28,7 +28,7 @@ export function runFfmpeg(args: string[]): Promise<void> {
 
     ff.on('close', (code) => {
       if (code === 0) {
-        console.log('✅ FFmpeg completed successfully.\n');
+        console.log('FFmpeg completed successfully.\n');
         resolve();
       } else {
         reject(new Error(`❌ ffmpeg exited ${code}\nargs: ${args.join(' ')}\nstderr:\n${stderr}`));
