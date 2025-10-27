@@ -14,7 +14,7 @@ import { zoom_effectAd } from 'src/efffects/zoom_effect';
 import { cycling_effects_video } from 'src/efffects/cycling.effect';
 import { compositeWithAudioMixing } from 'src/utils/video_compositor';
 import * as dotenv from 'dotenv';
-import { generateAvatarForeground } from 'src/avatar-utils/avatar_foreground';
+import { AvatarService } from '../avatar';
 
 const execPromise = promisify(exec);
 
@@ -300,161 +300,87 @@ async function buildVideoWorker(data: WorkerData) {
     console.log(`✅ Background: ${path.basename(backgroundVideoPath)}`);
 
 
-    let avatarForegroundPath: string | null = null;
-    let skipAvatarReason: string = '';
-    
+    // ========== STEP 2: AVATAR PROCESSING ==========
     console.log(`\n${'='.repeat(80)}`);
-    console.log(`👤 STEP 2: AVATAR FOREGROUND CHECK`);
+    console.log(`👤 STEP 2: AVATAR PROCESSING`);
     console.log(`=`.repeat(80));
-    console.log(`   avatarPath value: ${avatarPath || 'undefined/null'}`);
-    console.log(`   avatarPath exists: ${avatarPath ? fs.existsSync(avatarPath) : 'N/A'}`);
-    console.log(`   avatar_url provided: ${avatar_url ? 'YES' : 'NO'}`);
     
-    if (avatarPath) {
-      console.log(`   Full avatarPath: ${avatarPath}`);
+    let finalVideoPath: string | null = null;
+    
+    if (avatarPath && fs.existsSync(avatarPath)) {
+      console.log(`   ✅ Avatar file found: ${path.basename(avatarPath)}`);
       
-      if (fs.existsSync(avatarPath)) {
-        const avatarStats = fs.statSync(avatarPath);
-        console.log(`   Avatar file size: ${(avatarStats.size / 1024 / 1024).toFixed(2)} MB`);
-        
-        if (avatarStats.size === 0) {
-          console.error(`   ❌ Avatar file is empty!`);
-          skipAvatarReason = 'Avatar file is empty';
-        } else {
-          console.log(`   ✅ Avatar file valid, proceeding...`);
-          
+      const avatarStats = fs.statSync(avatarPath);
+      console.log(`   Avatar file size: ${(avatarStats.size / 1024 / 1024).toFixed(2)} MB`);
+      
+      if (avatarStats.size === 0) {
+        console.error(`   ❌ Avatar file is empty!`);
+        console.log(`   ℹ️ Reason avatar not included: Avatar file is empty`);
+      } else {
+        try {
           const avatarMode = data.avatarMode || 'mix_mode_new';
           console.log(`   Avatar mode: ${avatarMode}`);
           
-          // Load config
-          const configPath = path.join(process.cwd(), 'config', 'avatar_config.json');
-          let avatarConfig: any;
+          const avatarService = new AvatarService();
           
-          if (fs.existsSync(configPath)) {
-            console.log(`   ✅ Config loaded from: ${configPath}`);
-            avatarConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-          } else {
-            console.warn(`   ⚠️ Config not found, using defaults`);
-            avatarConfig = {
-              mix_mode_new: {
-                scale: 0.2,
-                position: 'bottom-left',
-                opacity: 250,
-                margin: 10
-              }
-            };
-          }
-
-          try {
-            console.log(`   Getting background video dimensions...`);
-            const { stdout } = await execPromise(
-              `ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${backgroundVideoPath}"`
-            );
-            const [width, height] = stdout.trim().split('x').map(Number);
-            console.log(`   Background dimensions: ${width}x${height}`);
-
-            if (!avatarConfig[avatarMode]) {
-              console.error(`   ❌ Invalid avatar_mode: ${avatarMode}`);
-              skipAvatarReason = `Invalid avatar_mode '${avatarMode}'`;
-            } else {
-              console.log(`\n   🎬 Generating avatar foreground...`);
-              avatarForegroundPath = await generateAvatarForeground(
-                avatarPath,
-                updatedScenes,
-                dirs.tempDir,
-                avatarMode,
-                avatarConfig,
-                runFfmpeg,
-                width || 1920,
-                height || 1080
-              );
-
-              if (avatarForegroundPath && fs.existsSync(avatarForegroundPath)) {
-                const fgStats = fs.statSync(avatarForegroundPath);
-                console.log(`   ✅ Avatar foreground created: ${path.basename(avatarForegroundPath)}`);
-                console.log(`   Size: ${(fgStats.size / 1024 / 1024).toFixed(2)} MB`);
-              } else {
-                console.error(`   ❌ Avatar foreground file not created!`);
-                skipAvatarReason = 'Avatar foreground generation returned no file';
-                avatarForegroundPath = null;
-              }
-            }
-          } catch (err: any) {
-            console.error(`   ❌ Avatar generation failed: ${err.message}`);
-            console.error(`   Stack: ${err.stack}`);
-            console.warn(`   ⚠️ Continuing without avatar`);
-            skipAvatarReason = `Avatar generation failed: ${err.message}`;
-            avatarForegroundPath = null;
-          }
+          // Generate complete avatar video using new service
+          finalVideoPath = await avatarService.generateAvatarVideo({
+            scenes: updatedScenes,
+            effectType: chosenEffect,
+            avatarMode,
+            avatarPath,
+            audioPath: path.join(dirs.audioDir, 'full_audio.wav'),
+            backgroundMusicPath: fs.existsSync(path.join(dirs.musicDir, 'back_audio.wav')) 
+              ? path.join(dirs.musicDir, 'back_audio.wav') 
+              : undefined,
+            tempDir: dirs.tempDir,
+            outputPath: path.join(dirs.outputDir, `final_${chosenEffect}_${Date.now()}.mp4`),
+            requestId,
+            dirs,
+            fps,
+            templates: overlayTemplates,
+            templateName: chosenEffect,
+            logoPath
+          });
+          
+          console.log(`✅ Avatar video generated successfully`);
+          
+        } catch (err: any) {
+          console.error(`   ❌ Avatar generation failed: ${err.message}`);
+          console.log(`   ℹ️ Reason avatar not included: Avatar generation failed: ${err.message}`);
+          finalVideoPath = null;
         }
-      } else {
-        console.error(`   ❌ Avatar file does not exist at path!`);
-        skipAvatarReason = 'Avatar file path does not exist after download';
       }
     } else {
-      console.log(`   ⚠️ avatarPath is null/undefined`);
       if (avatar_url) {
-        console.error(`   ❌ CRITICAL: avatar_url was provided but avatarPath is empty!`);
-        console.error(`   This means saveSceneAssets failed to download the avatar`);
-        skipAvatarReason = 'Avatar download failed (avatar_url provided but local path missing)';
+        console.error(`   ❌ Avatar file not found after download!`);
+        console.log(`   ℹ️ Reason avatar not included: Avatar download failed`);
       } else {
-        console.log(`   ℹ️ No avatar_url provided, skipping avatar overlay`);
-        skipAvatarReason = 'No avatar_url provided';
+        console.log(`   ℹ️ No avatar_url provided, skipping avatar`);
+        console.log(`   ℹ️ Reason avatar not included: No avatar_url provided`);
       }
     }
-    console.log(`=`.repeat(80));
-
-    // ========== STEP 3: COMPOSITE ==========
-    console.log(`\n${'='.repeat(80)}`);
-    console.log(`🎨 STEP 3: COMPOSITING FINAL VIDEO`);
-    console.log(`=`.repeat(80));
-
-    const audioPath = path.join(dirs.audioDir, 'full_audio.wav');
-    const musicPath = path.join(dirs.musicDir, 'back_audio.wav');
     
-    const hasMainAudio = await validateAudioFile(audioPath, requestId);
-    if (!hasMainAudio) {
-      throw new Error('Main audio not found');
-    }
-
-    const hasBackgroundMusic = fs.existsSync(musicPath) 
-      ? await validateAudioFile(musicPath, requestId, 'Background music')
-      : false;
-
-    const finalVideoPath = path.join(dirs.outputDir, `final_${chosenEffect}_${Date.now()}.mp4`);
-
-    if (avatarForegroundPath && fs.existsSync(avatarForegroundPath)) {
-      console.log('🎬 Compositing: Background + Avatar + Audio');
-      console.log(`   ▶ Inputs:`);
-      console.log(`     BG : ${backgroundVideoPath}`);
-      console.log(`     AV : ${avatarForegroundPath}`);
-      console.log(`     AUD: ${audioPath}`);
-      if (hasBackgroundMusic) console.log(`     BGM: ${musicPath}`);
+    // If avatar generation failed, fallback to background + audio only
+    if (!finalVideoPath) {
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`🎨 STEP 3: FALLBACK - BACKGROUND + AUDIO ONLY`);
+      console.log(`=`.repeat(80));
       
-      await compositeWithAudioMixing(
-        backgroundVideoPath,
-        avatarForegroundPath,
-        audioPath,
-        hasBackgroundMusic ? musicPath : null,
-        finalVideoPath,
-        runFfmpeg,
-        requestId
-      );
-
-      try {
-        fs.unlinkSync(backgroundVideoPath);
-        fs.unlinkSync(avatarForegroundPath);
-        console.log('🧹 Cleaned temp layers');
-      } catch (err) {
-        console.warn('⚠️ Cleanup warning');
+      const audioPath = path.join(dirs.audioDir, 'full_audio.wav');
+      const musicPath = path.join(dirs.musicDir, 'back_audio.wav');
+      
+      const hasMainAudio = await validateAudioFile(audioPath, requestId);
+      if (!hasMainAudio) {
+        throw new Error('Main audio not found');
       }
 
-    } else {
-      console.log('🎬 Compositing: Background + Audio only (no avatar foreground)');
-      if (skipAvatarReason) {
-        console.log(`   ℹ️ Reason avatar not included: ${skipAvatarReason}`);
-      }
-      
+      const hasBackgroundMusic = fs.existsSync(musicPath) 
+        ? await validateAudioFile(musicPath, requestId, 'Background music')
+        : false;
+
+      finalVideoPath = path.join(dirs.outputDir, `final_${chosenEffect}_${Date.now()}.mp4`);
+
       const musicArgs = hasBackgroundMusic 
         ? [
             '-i', escapePath(audioPath),
@@ -500,8 +426,8 @@ async function buildVideoWorker(data: WorkerData) {
     console.log(`=`.repeat(80));
     console.log(`📦 Size: ${(videoStats.size / 1024 / 1024).toFixed(2)} MB`);
     console.log(`📍 Path: ${finalVideoPath}`);
-    console.log(`👤 Avatar: ${avatarForegroundPath ? '✅' : '❌'}`);
-    console.log(`🎵 Music: ${hasBackgroundMusic ? '✅' : '❌'}`);
+    console.log(`👤 Avatar: ${avatarPath ? '✅' : '❌'}`);
+    console.log(`🎵 Music: ${backgroundMusicPath ? '✅' : '❌'}`);
     console.log(`=`.repeat(80));
 
     // Upload
@@ -534,9 +460,9 @@ async function buildVideoWorker(data: WorkerData) {
         totalClips: clipPaths.length,
         videoSize: videoStats.size,
         videoSizeMB: (videoStats.size / 1024 / 1024).toFixed(2),
-        hasAvatar: !!avatarForegroundPath,
+        hasAvatar: !!avatarPath,
         hasLogo: !!logoPath,
-        hasBackgroundMusic: hasBackgroundMusic,
+        hasBackgroundMusic: !!backgroundMusicPath,
       },
     };
   } catch (err: any) {

@@ -2,43 +2,19 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { 
+  Scene, 
+  AvatarConfig, 
+  AvatarPosition, 
+  AvatarDimensions, 
+  AvatarGenerationOptions 
+} from '../types';
 
 const execPromise = promisify(exec);
 
-interface Scene {
-  scene_id: string | number;
-  [key: string]: any;
-}
-
-interface AvatarConfig {
-  [mode: string]: {
-    scale?: number;
-    main_scale?: number;
-    small_scale?: number;
-    position?: string;
-    opacity?: number;
-    margin?: number;
-    x_offset?: number;
-    y_offset?: number;
-    corner_radius?: number;
-    states?: string[];
-    state_duration?: number;
-    pip_scale?: number;
-    pip_opacity?: number;
-    margin_bottom?: number;
-    slide_duration?: number;
-    pause_duration?: number;
-    num_cycles?: number;
-    corners?: string[];
-    min_interval?: number;
-    max_interval?: number;
-    disappear_prob?: number;
-    EPSILON?: number;
-    description?: string;
-  };
-}
-
-async function getVideoInfo(videoPath: string): Promise<{ width: number; height: number; duration: number }> {
+export class AvatarForegroundService {
+  
+  async getVideoInfo(videoPath: string): Promise<AvatarDimensions> {
   try {
     const ext = path.extname(videoPath).toLowerCase();
     const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'].includes(ext);
@@ -68,9 +44,9 @@ async function getVideoInfo(videoPath: string): Promise<{ width: number; height:
     console.error(`Failed to get video info: ${err.message}`);
     throw err;
   }
-}
+  }
 
-function calculatePosition(
+  calculatePosition(
   position: string,
   canvasWidth: number,
   canvasHeight: number,
@@ -110,12 +86,9 @@ function calculatePosition(
   }
 
   return { x, y };
-}
+  }
 
-/**
- * Create rounded corners mask using overlay approach (SIMPLIFIED)
- */
-async function createRoundedMask(
+  async createRoundedMask(
   width: number,
   height: number,
   radius: number,
@@ -135,10 +108,9 @@ async function createRoundedMask(
   ];
   
   await runFfmpeg(args);
-}
-// ✅ WORKING SOLUTION - Use filter_complex instead of -loop
+  }
 
-async function generateFixedPositionAvatar(
+  async generateFixedPositionAvatar(
   avatarPath: string,
   outputPath: string,
   config: any,
@@ -157,7 +129,7 @@ async function generateFixedPositionAvatar(
   const scaledWidth = Math.round(canvasWidth * scale);
   const scaledHeight = Math.round(canvasHeight * scale);
 
-  const { x, y } = calculatePosition(
+  const { x, y } = this.calculatePosition(
     position,
     canvasWidth,
     canvasHeight,
@@ -198,10 +170,9 @@ async function generateFixedPositionAvatar(
 
   console.log(`   🎬 Generating avatar video (${totalDuration.toFixed(2)}s)...`);
   await runFfmpeg(args);
-}
+  }
 
-
-async function generateMixModeAvatar(
+  async generateMixModeAvatar(
   avatarPath: string,
   outputPath: string,
   config: any,
@@ -303,8 +274,9 @@ async function generateMixModeAvatar(
   fs.unlinkSync(concatList);
 
   console.log(`   ✅ Mix mode complete`);
-}
-export async function generateAvatarForeground(
+  }
+
+  async generateAvatarForeground(
   avatarPath: string,
   scenes: Scene[],
   tempDir: string,
@@ -341,7 +313,7 @@ export async function generateAvatarForeground(
   console.log(`Duration: ${totalDuration.toFixed(2)}s`);
 
   // Check avatar
-  const avatarInfo = await getVideoInfo(avatarPath);
+  const avatarInfo = await this.getVideoInfo(avatarPath);
   
   if (!avatarInfo.width || !avatarInfo.height) {
     throw new Error('Failed to get avatar dimensions');
@@ -354,7 +326,7 @@ export async function generateAvatarForeground(
 
     if (isMixMode) {
       console.log(`🔄 MIX MODE`);
-      await generateMixModeAvatar(
+      await this.generateMixModeAvatar(
         avatarPath,
         outputPath,
         config,
@@ -366,7 +338,7 @@ export async function generateAvatarForeground(
       );
     } else {
       console.log(`📍 FIXED POSITION`);
-      await generateFixedPositionAvatar(
+      await this.generateFixedPositionAvatar(
         avatarPath,
         outputPath,
         config,
@@ -390,5 +362,6 @@ export async function generateAvatarForeground(
   } catch (err: any) {
     console.error(`❌ Failed: ${err.message}`);
     throw err;
+  }
   }
 }   
