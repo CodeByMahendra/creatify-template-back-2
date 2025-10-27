@@ -104,8 +104,8 @@ export function toTime(s: number): string {
 
 export function splitWordsIntoChunks(
   words: Array<{ word: string; start: number; end: number }>,
-  minWords: number = 5,
-  maxWords: number = 6
+  minWords: number = 3,
+  maxWords: number = 4
 ): Array<Array<{ word: string; start: number; end: number }>> {
   const chunks: Array<Array<{ word: string; start: number; end: number }>> = [];
   

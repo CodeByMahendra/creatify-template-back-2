@@ -383,7 +383,7 @@ export async function cycling_effects_video(
 
       if (scene.image_filename.startsWith('http')) {
         try {
-          console.log(` Analyzing: ${scene.chunk_id}`);
+          console.log(` Analyzing: ${scene.scene_id}`);
           const response = await axios.get(scene.image_filename, {
             responseType: 'arraybuffer',
           });
@@ -405,11 +405,11 @@ export async function cycling_effects_video(
             }
           }
         } catch (err) {
-          console.warn(`    Failed to fetch: ${scene.chunk_id}`);
+          console.warn(`    Failed to fetch: ${scene.scene_id}`);
         }
       } else if (fs.existsSync(imgPath)) {
         try {
-          console.log(` Analyzing: ${scene.chunk_id}`);
+          console.log(` Analyzing: ${scene.scene_id}`);
           const metadata = await sharp(imgPath).metadata();
 
           if (metadata.width && metadata.height) {
@@ -427,7 +427,7 @@ export async function cycling_effects_video(
             }
           }
         } catch (err) {
-          console.warn(`    Failed to analyze: ${scene.chunk_id}`);
+          console.warn(`    Failed to analyze: ${scene.scene_id}`);
         }
       }
     }
@@ -485,7 +485,7 @@ const stylePattern = [
     const currentEffect = effectCycle[effectIndex];
     
     const {
-      chunk_id,
+      scene_id,
       image_filename,
       video_filename,
       overlayText,
@@ -507,7 +507,7 @@ const stylePattern = [
       gapAfter = nextStart - currentEnd;
       
       if (gapAfter > 0.01) {
-        console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id}) - Effect: ${currentEffect.toUpperCase()}`);
+        console.log(`\n Scene ${i + 1}/${scenes.length} (${scene_id}) - Effect: ${currentEffect.toUpperCase()}`);
         console.log(`    Gap detected: ${gapAfter.toFixed(2)}s after this scene`);
         console.log(`    Original duration: ${audio_duration.toFixed(2)}s`);
         
@@ -515,12 +515,12 @@ const stylePattern = [
         console.log(`    Extended duration: ${clipDuration.toFixed(2)}s (includes gap)`);
       } else {
         clipDuration = audio_duration || (end_time - start_time) || 0;
-        console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id}) - Effect: ${currentEffect.toUpperCase()}`);
+        console.log(`\n Scene ${i + 1}/${scenes.length} (${scene_id}) - Effect: ${currentEffect.toUpperCase()}`);
         console.log(`    Duration: ${clipDuration.toFixed(2)}s (no gap)`);
       }
     } else {
       clipDuration = audio_duration || (end_time - start_time) || 0;
-      console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE (Blur + Logo)`);
+      console.log(`\n Scene ${i + 1}/${scenes.length} (${scene_id}) - LAST SCENE (Blur + Logo)`);
       console.log(`    Duration: ${clipDuration.toFixed(2)}s`);
       if (logoPath) {
         console.log(`      Will show blur background + logo + karaoke text`);
@@ -528,7 +528,7 @@ const stylePattern = [
     }
 
     if (clipDuration <= 0) {
-      console.warn(` Scene ${chunk_id} has invalid duration (${clipDuration}s), skipping...`);
+      console.warn(` Scene ${scene_id} has invalid duration (${clipDuration}s), skipping...`);
       continue;
     }
 
@@ -556,13 +556,13 @@ const stylePattern = [
             responseType: 'arraybuffer',
           });
           const buffer = Buffer.from(response.data);
-          const tempPath = path.join(dirs.tempDir, `downloaded_${chunk_id}.jpg`);
+          const tempPath = path.join(dirs.tempDir, `downloaded_${scene_id}.jpg`);
           fs.writeFileSync(tempPath, buffer);
           inputPath = tempPath;
           console.log(`     Downloaded (${buffer.length} bytes)`);
         } catch (err) {
           console.warn(`    ⚠️  Download failed, using black frame`);
-          const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
+          const blackPath = path.join(dirs.tempDir, `black_${scene_id}.png`);
           if (!fs.existsSync(blackPath)) {
             await sharp(createBlackFrame(width, height), {
               raw: { width, height, channels: 3 },
@@ -582,7 +582,7 @@ const stylePattern = [
       if (fs.existsSync(inputPath)) {
         console.log(`     Resizing image to ${width}x${height}...`);
         const resizedBuffer = await loadAndResizeImage(inputPath, width, height);
-        const resizedPath = path.join(dirs.resizedDir, `resized_${chunk_id}.jpg`);
+        const resizedPath = path.join(dirs.resizedDir, `resized_${scene_id}.jpg`);
         
         if (!fs.existsSync(dirs.resizedDir)) {
           fs.mkdirSync(dirs.resizedDir, { recursive: true });
@@ -598,7 +598,7 @@ const stylePattern = [
       }
     } else {
       console.log(`     Creating black frame`);
-      const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
+      const blackPath = path.join(dirs.tempDir, `black_${scene_id}.png`);
       if (!fs.existsSync(blackPath)) {
         await sharp(createBlackFrame(width, height), {
           raw: { width, height, channels: 3 },
@@ -613,7 +613,7 @@ const stylePattern = [
       throw new Error(`Input not found: ${inputPath}`);
     }
 
-    const clipPath = path.join(dirs.clipsDir, `clip_${chunk_id}.mp4`);
+    const clipPath = path.join(dirs.clipsDir, `clip_${scene_id}.mp4`);
     clipPaths.push(clipPath);
 
     const args: string[] = [
@@ -635,7 +635,7 @@ const stylePattern = [
         Math.floor(width * 0.4),
         Math.floor(height * 0.4),
         dirs.resizedDir,
-        chunk_id
+        scene_id
       );
       
       if (resizedLogoPath && fs.existsSync(resizedLogoPath)) {
@@ -761,7 +761,7 @@ case 'wipe_right': {
 
       const assFile = generateAssWithKaraoke(
         dirs.assDir,
-        chunk_id,
+        scene_id,
         overlayText,
         audio_duration,
         relativeWords,
@@ -778,7 +778,7 @@ case 'wipe_right': {
       
       const assFile = generateAssFromTemplate(
         dirs.assDir,
-        chunk_id,
+        scene_id,
         overlayText,
         audio_duration || clipDuration,
         templates,

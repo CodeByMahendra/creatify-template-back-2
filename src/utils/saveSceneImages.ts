@@ -3,7 +3,7 @@ import * as path from 'path';
 import axios from 'axios';
 
 export interface Scene {
-  chunk_id: string;
+ scene_id: number;
   image_filename?: string;
   video_filename?: string;
   audio_filename?: string;
@@ -149,7 +149,7 @@ export async function saveSceneAssets(
       }
     }
 
-    // ⭐ Download avatar video
+    //  Download avatar video
     let avatarPath: string | undefined;
     if (avatarUrl) {
       try {
@@ -183,7 +183,7 @@ export async function saveSceneAssets(
       const scene = { ...scenes[i] };
       const sceneNum = i + 1;
 
-      console.log(` Scene ${sceneNum}/${scenes.length}: ${scene.chunk_id}`);
+      console.log(` Scene ${sceneNum}/${scenes.length}: ${scene.scene_id}`);
 
       try {
         // Detect asset type
@@ -201,7 +201,7 @@ export async function saveSceneAssets(
         }
 
         if (!assetUrl) {
-          console.warn(`     No media found for scene ${scene.chunk_id}`);
+          console.warn(`     No media found for scene ${scene.scene_id}`);
           updatedScenes.push({
             ...scene,
             audio_filename: globalAudioPath,
@@ -213,7 +213,7 @@ export async function saveSceneAssets(
         // Handle URL-based media
         if (assetUrl.startsWith('http://') || assetUrl.startsWith('https://')) {
           const ext = getFileExtension(assetUrl);
-          const safeName = sanitizeFileName(scene.chunk_id);
+          const safeName = sanitizeFileName(scene.scene_id.toString());
           const targetDir = isVideo ? videosDir : imagesDir;
           const localPath = path.join(targetDir, `${safeName}${ext}`);
 
@@ -261,7 +261,7 @@ export async function saveSceneAssets(
 
         console.log(`   ✅ Scene ${sceneNum} processed\n`);
       } catch (err: any) {
-        console.error(`   ❌ Error processing scene ${scene.chunk_id}:`, err.message);
+        console.error(`   ❌ Error processing scene ${scene.scene_id}:`, err.message);
         updatedScenes.push({
           ...scene,
           audio_filename: globalAudioPath,

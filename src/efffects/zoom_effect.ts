@@ -192,7 +192,7 @@ export async function zoom_effectAd(
           
           ratioCount[detectedRatio] = (ratioCount[detectedRatio] || 0) + 1;
         } catch (err: any) {
-          console.warn(`Failed to analyze: ${scene.chunk_id}`);
+          console.warn(`Failed to analyze: ${scene.scene_id}`);
         }
       }
       
@@ -224,7 +224,7 @@ export async function zoom_effectAd(
       const hasLogoOnLastClip = isLastClip && logoPath && fs.existsSync(logoPath);
       
       const {
-        chunk_id,
+        scene_id,
         image_filename,
         video_filename,
         direction,
@@ -236,7 +236,7 @@ export async function zoom_effectAd(
         audio_duration,
       } = scene;
 
-      console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+      console.log(`\n Scene ${i + 1}/${scenes.length} (${scene_id})`);
       console.log(`   Type: ${asset_type.toUpperCase()}`);
 
       let clipDuration: number;
@@ -314,7 +314,7 @@ export async function zoom_effectAd(
               timeout: 10000
             });
             const buffer = Buffer.from(response.data);
-            const tempPath = path.join(dirs.tempDir, `downloaded_${chunk_id}.jpg`);
+            const tempPath = path.join(dirs.tempDir, `downloaded_${scene_id}.jpg`);
             fs.writeFileSync(tempPath, buffer);
             inputPath = tempPath;
             console.log(`   Downloaded`);
@@ -343,7 +343,7 @@ export async function zoom_effectAd(
       // ========== BLACK FRAME FALLBACK ==========
       else {
         console.log(`    Creating black frame`);
-        const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.jpg`);
+        const blackPath = path.join(dirs.tempDir, `black_${scene_id}.jpg`);
         if (!fs.existsSync(blackPath)) {
           await sharp(createBlackFrame(width, height), {
             raw: { width, height, channels: 3 },
@@ -359,7 +359,7 @@ export async function zoom_effectAd(
         continue;
       }
 
-      const clipPath = path.join(dirs.clipsDir, `clip_${chunk_id}.mp4`);
+      const clipPath = path.join(dirs.clipsDir, `clip_${scene_id}.mp4`);
       clipPaths.push(clipPath);
 
       // ========== BUILD FFMPEG FILTER ==========
@@ -391,7 +391,7 @@ export async function zoom_effectAd(
           logoMaxWidth,
           logoMaxHeight,
           dirs.resizedDir,
-          chunk_id
+          scene_id
         );
         
         if (resizedLogoPath && fs.existsSync(resizedLogoPath)) {
@@ -432,7 +432,7 @@ export async function zoom_effectAd(
         
         const assFile = generateAssWithKaraoke(
           dirs.assDir,
-          chunk_id,
+          scene_id,
           overlayText,
           audio_duration,
           relativeWords,
@@ -448,7 +448,7 @@ export async function zoom_effectAd(
       } else if (overlayText) {
         const assFile = generateAssFromTemplate(
           dirs.assDir,
-          chunk_id,
+          scene_id,
           overlayText,
           audio_duration || clipDuration,
           templates,

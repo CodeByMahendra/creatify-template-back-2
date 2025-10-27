@@ -1,0 +1,20 @@
+[Script Info]
+Title: Clip_8_Karaoke_Chunks
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+Collisions: Normal
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Highlight,Bebas Neue,38,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,6,2,10,10,40,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.28,Highlight,,0,0,0,,{\c&H000000FF}crafted{\c&H00FFFFFF} with timeless elegance and powerful
+Dialogue: 0,0:00:00.28,0:00:00.54,Highlight,,0,0,0,,crafted {\c&H000000FF}with{\c&H00FFFFFF} timeless elegance and powerful
+Dialogue: 0,0:00:00.54,0:00:00.90,Highlight,,0,0,0,,crafted with {\c&H000000FF}timeless{\c&H00FFFFFF} elegance and powerful
+Dialogue: 0,0:00:00.90,0:00:01.46,Highlight,,0,0,0,,crafted with timeless {\c&H000000FF}elegance{\c&H00FFFFFF} and powerful
+Dialogue: 0,0:00:01.46,0:00:01.58,Highlight,,0,0,0,,crafted with timeless elegance {\c&H000000FF}and{\c&H00FFFFFF} powerful
+Dialogue: 0,0:00:01.58,0:00:01.92,Highlight,,0,0,0,,crafted with timeless elegance and {\c&H000000FF}powerful{\c&H00FFFFFF}
+Dialogue: 0,0:00:01.92,0:00:02.38,Highlight,,0,0,0,,{\c&H000000FF}performance{\c&H00FFFFFF}

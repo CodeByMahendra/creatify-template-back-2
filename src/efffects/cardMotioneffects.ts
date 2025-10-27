@@ -135,7 +135,7 @@ export async function card_motion_effectAd(
 
       if (scene.image_filename.startsWith('http')) {
         try {
-          console.log(` Analyzing: ${scene.chunk_id}`);
+          console.log(` Analyzing: ${scene.scene_id}`);
           const response = await axios.get(scene.image_filename, {
             responseType: 'arraybuffer',
           });
@@ -157,11 +157,11 @@ export async function card_motion_effectAd(
             }
           }
         } catch (err) {
-          console.warn(`    Failed to fetch: ${scene.chunk_id}`);
+          console.warn(`    Failed to fetch: ${scene.scene_id}`);
         }
       } else if (fs.existsSync(imgPath)) {
         try {
-          console.log(` Analyzing: ${scene.chunk_id}`);
+          console.log(` Analyzing: ${scene.scene_id}`);
           const metadata = await sharp(imgPath).metadata();
 
           if (metadata.width && metadata.height) {
@@ -179,7 +179,7 @@ export async function card_motion_effectAd(
             }
           }
         } catch (err) {
-          console.warn(`    Failed to analyze: ${scene.chunk_id}`);
+          console.warn(`    Failed to analyze: ${scene.scene_id}`);
         }
       }
     }
@@ -213,7 +213,7 @@ export async function card_motion_effectAd(
     const isLastClip = i === scenes.length - 1;
     
     const {
-      chunk_id,
+      scene_id,
       image_filename,
       video_filename,
       overlayText,
@@ -235,7 +235,7 @@ export async function card_motion_effectAd(
       gapAfter = nextStart - currentEnd;
       
       if (gapAfter > 0.01) {
-        console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+        console.log(`\n Scene ${i + 1}/${scenes.length} (${scene_id})`);
         console.log(`    Gap detected: ${gapAfter.toFixed(2)}s after this scene`);
         console.log(`    Original duration: ${audio_duration.toFixed(2)}s`);
         
@@ -243,12 +243,12 @@ export async function card_motion_effectAd(
         console.log(`    Extended duration: ${clipDuration.toFixed(2)}s (includes gap)`);
       } else {
         clipDuration = audio_duration || (end_time - start_time) || 0;
-        console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id})`);
+        console.log(`\n Scene ${i + 1}/${scenes.length} (${scene_id})`);
         console.log(`    Duration: ${clipDuration.toFixed(2)}s (no gap)`);
       }
     } else {
       clipDuration = audio_duration || (end_time - start_time) || 0;
-      console.log(`\n Scene ${i + 1}/${scenes.length} (${chunk_id}) - LAST SCENE`);
+      console.log(`\n Scene ${i + 1}/${scenes.length} (${scene_id}) - LAST SCENE`);
       console.log(`    Duration: ${clipDuration.toFixed(2)}s`);
       if (logoPath) {
         console.log(`      Will show blur background + logo + karaoke text (no card)`);
@@ -256,7 +256,7 @@ export async function card_motion_effectAd(
     }
 
     if (clipDuration <= 0) {
-      console.warn(` Scene ${chunk_id} has invalid duration (${clipDuration}s), skipping...`);
+      console.warn(` Scene ${scene_id} has invalid duration (${clipDuration}s), skipping...`);
       continue;
     }
 
@@ -289,13 +289,13 @@ export async function card_motion_effectAd(
             responseType: 'arraybuffer',
           });
           const buffer = Buffer.from(response.data);
-          const tempPath = path.join(dirs.tempDir, `downloaded_${chunk_id}.jpg`);
+          const tempPath = path.join(dirs.tempDir, `downloaded_${scene_id}.jpg`);
           fs.writeFileSync(tempPath, buffer);
           inputPath = tempPath;
           console.log(`    Downloaded (${buffer.length} bytes)`);
         } catch (err) {
           console.warn(`    Download failed`);
-          const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
+          const blackPath = path.join(dirs.tempDir, `black_${scene_id}.png`);
           if (!fs.existsSync(blackPath)) {
             await sharp(createBlackFrame(width, height), {
               raw: { width, height, channels: 3 },
@@ -314,7 +314,7 @@ export async function card_motion_effectAd(
       if (fs.existsSync(inputPath)) {
         console.log(`     Preparing image for card effect...`);
         const resizedBuffer = await loadAndResizeImage(inputPath, width, height);
-        const resizedPath = path.join(dirs.resizedDir, `resized_${chunk_id}.jpg`);
+        const resizedPath = path.join(dirs.resizedDir, `resized_${scene_id}.jpg`);
         
         if (!fs.existsSync(dirs.resizedDir)) {
           fs.mkdirSync(dirs.resizedDir, { recursive: true });
@@ -330,7 +330,7 @@ export async function card_motion_effectAd(
       }
     } else {
       console.log(`     Creating black frame`);
-      const blackPath = path.join(dirs.tempDir, `black_${chunk_id}.png`);
+      const blackPath = path.join(dirs.tempDir, `black_${scene_id}.png`);
       if (!fs.existsSync(blackPath)) {
         await sharp(createBlackFrame(width, height), {
           raw: { width, height, channels: 3 },
@@ -345,7 +345,7 @@ export async function card_motion_effectAd(
       throw new Error(`Input not found: ${inputPath}`);
     }
 
-    const clipPath = path.join(dirs.clipsDir, `clip_${chunk_id}.mp4`);
+    const clipPath = path.join(dirs.clipsDir, `clip_${scene_id}.mp4`);
     clipPaths.push(clipPath);
 
     const args: string[] = ['-y'];
@@ -367,7 +367,7 @@ export async function card_motion_effectAd(
         Math.floor(width * 0.4),
         Math.floor(height * 0.4),
         dirs.resizedDir,
-        chunk_id
+        scene_id
       );
       
       if (resizedLogoPath && fs.existsSync(resizedLogoPath)) {
@@ -393,7 +393,7 @@ export async function card_motion_effectAd(
         // Image processing with rounded corners (aspect ratio already maintained)
         args.push('-loop', '1', '-i', inputPath);
         
-        const cardPath = path.join(dirs.resizedDir, `card_${chunk_id}.png`);
+        const cardPath = path.join(dirs.resizedDir, `card_${scene_id}.png`);
         console.log(`     Creating rounded card with ${cornerRadius}px corners (ASPECT RATIO MAINTAINED)...`);
         await createRoundedCard(inputPath, width, height, cornerRadius, cardPath);
         console.log(`     Rounded card created`);
@@ -436,7 +436,7 @@ export async function card_motion_effectAd(
 
       const assFile = generateAssWithKaraoke(
         dirs.assDir,
-        chunk_id,
+        scene_id,
         overlayText,
         audio_duration,
         relativeWords,
@@ -451,7 +451,7 @@ export async function card_motion_effectAd(
     } else if (overlayText) {
       const assFile = generateAssFromTemplate(
         dirs.assDir,
-        chunk_id,
+        scene_id,
         overlayText,
         audio_duration || clipDuration,
         templates,

@@ -1,3 +1,4 @@
+
 import { Controller, Post, Body, Get, Param, Delete, HttpException, HttpStatus } from '@nestjs/common';
 import { VideoService } from './video.service';
 
@@ -8,7 +9,7 @@ interface WordTiming {
 }
 
 interface ScenePayload {
-  chunk_id: string;
+  scene_id: number;
   image_filename: string;
   duration: number;
   direction?: string;
@@ -24,11 +25,12 @@ interface ScenePayload {
 }
 
 interface RenderPayload {
-  effectType?: string;  // Optional 
-  audio_url: string;     // Required
+  effectType?: string;
+  audio_url: string;
   logo_url?: string;
-    avatar_url?: string;     // Optional
-  background_music_url?: string;  // Optional
+  avatar_url?: string;
+  background_music_url?: string;
+  avatar_mode?: string;
   scenes: ScenePayload[];
 }
 
@@ -47,20 +49,33 @@ export class VideoController {
         throw new HttpException('Audio URL is required', HttpStatus.BAD_REQUEST);
       }
 
-      console.log(`\n Received render request:`);
-      console.log(`   Effect: ${payload.effectType || 'zoom_effect'}`);
-      console.log(`   Scenes: ${payload.scenes.length}`);
-      console.log(`   Audio: ${payload.audio_url ? 'Yes' : 'No'}`);
-      console.log(`   Logo: ${payload.logo_url ? 'Yes' : 'No'}`);
-      console.log(`   Background Music: ${payload.background_music_url ? 'Yes' : 'No'}\n`);
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`📥 CONTROLLER - Received render request`);
+      console.log(`=`.repeat(80));
+      console.log(`Effect: ${payload.effectType || 'zoom_effect'}`);
+      console.log(`Scenes: ${payload.scenes.length}`);
+      console.log(`Audio: ${payload.audio_url ? '✅ YES' : '❌ NO'}`);
+      console.log(`Logo: ${payload.logo_url ? '✅ YES' : '❌ NO'}`);
+      console.log(`Avatar: ${payload.avatar_url ? '✅ YES' : '❌ NO'}`);
+      console.log(`Background Music: ${payload.background_music_url ? '✅ YES' : '❌ NO'}`);
+      
+      if (payload.avatar_url) {
+        console.log(`\n👤 Avatar URL in Controller:`);
+        console.log(`   ${payload.avatar_url.substring(0, 100)}...`);
+      } else {
+        console.warn(`\n⚠️ WARNING: No avatar_url in request payload!`);
+      }
+      console.log(`=`.repeat(80) + '\n');
 
+      // ✅ CORRECT ORDER - matches service signature!
       const result = await this.videoService.buildVideo(
         payload.scenes,
         payload.effectType,
         payload.audio_url,
         payload.logo_url,
-        payload.background_music_url,
-        payload.avatar_url
+        payload.avatar_url,              // ✅ 5th parameter
+        payload.background_music_url,    // ✅ 6th parameter
+        payload.avatar_mode              // ✅ 7th parameter (new)
       );
 
       return {
@@ -167,5 +182,3 @@ export class VideoController {
     }
   }
 }
-
-

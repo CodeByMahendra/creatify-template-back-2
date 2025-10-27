@@ -1,0 +1,135 @@
+{
+  "without_bg_avatar": {
+    "scale": 0.2,
+    "position": "bottom-left",
+    "opacity": 250,
+    "margin": 10,
+    "x_offset": 0,
+    "y_offset": 0,
+    "description": "Small avatar in bottom-left corner"
+  },
+  "without_bg_avatar_rightside": {
+    "scale": 0.2,
+    "position": "bottom-right",
+    "opacity": 250,
+    "margin": 10,
+    "x_offset": 0,
+    "y_offset": 0,
+    "description": "Small avatar in bottom-right corner"
+  },
+  "fixed-top-left": {
+    "scale": 0.17,
+    "position": "top-left",
+    "opacity": 250,
+    "margin": 10,
+    "description": "Small avatar in top-left corner"
+  },
+  "fixed-top-right": {
+    "scale": 0.17,
+    "position": "top-right",
+    "opacity": 250,
+    "margin": 10,
+    "description": "Small avatar in top-right corner"
+  },
+  "fixed-bottom-left": {
+    "scale": 0.17,
+    "position": "bottom-left",
+    "opacity": 250,
+    "margin": 10,
+    "description": "Small avatar in bottom-left corner"
+  },
+  "fixed-bottom-right": {
+    "scale": 0.17,
+    "position": "bottom-right",
+    "opacity": 250,
+    "margin": 10,
+    "description": "Small avatar in bottom-right corner"
+  },
+  "without_bg_avatar_big": {
+    "scale": 0.7,
+    "position": "bottom-left",
+    "opacity": 250,
+    "margin": 10,
+    "x_offset": -80,
+    "y_offset": 0,
+    "corner_radius": 30,
+    "description": "Large avatar bottom-left with rounded corners"
+  },
+  "without_bg_avatar_big_right_side": {
+    "scale": 0.7,
+    "position": "bottom-right",
+    "opacity": 250,
+    "margin": 10,
+    "x_offset": 100,
+    "y_offset": 0,
+    "corner_radius": 30,
+    "description": "Large avatar bottom-right with rounded corners"
+  },
+  "rapid_rec_slider": {
+    "pip_scale": 0.40,
+    "corner_radius": 30,
+    "pip_opacity": 1.0,
+    "margin_bottom": 80,
+    "slide_duration": 0.2,
+    "pause_duration": 2.0,
+    "num_cycles": 1,
+    "description": "Avatar slides from left to center to right"
+  },
+  "mix_mode_new": {
+    "main_scale": 0.30,
+    "small_scale": 0.17,
+    "scale": 0.17,
+    "opacity": 250,
+    "margin": 5,
+    "states": ["small", "full", "off"],
+    "state_duration": 7,
+    "corner_radius": 30,
+    "pip_scale": 0.30,
+    "pip_opacity": 1.0,
+    "margin_bottom": 80,
+    "slide_duration": 0.1,
+    "pause_duration": 1.7,
+    "description": "Avatar transitions between small/full/off states"
+  },
+  "mix_mode_side": {
+    "main_scale": 0.17,
+    "small_scale": 0.17,
+    "scale": 0.17,
+    "opacity": 250,
+    "margin": 5,
+    "states": ["small", "full", "off"],
+    "state_duration": 7,
+    "corner_radius": 30,
+    "pip_scale": 0.30,
+    "pip_opacity": 1.0,
+    "margin_bottom": 80,
+    "description": "Side-positioned mix mode avatar"
+  },
+  "avatar_mix_modes": {
+    "small_scale": 0.17,
+    "scale": 0.17,
+    "opacity": 250,
+    "margin": 5,
+    "states": ["small", "full", "off"],
+    "state_duration": 7,
+    "EPSILON": 0.09,
+    "description": "Classic mix mode with state cycling"
+  },
+  "moving-corner": {
+    "scale": 0.15,
+    "margin": 10,
+    "corners": ["top-left", "bottom-left", "bottom-right"],
+    "min_interval": 2,
+    "max_interval": 5,
+    "disappear_prob": 0.3,
+    "description": "Avatar moves between corners randomly"
+  },
+  "center-large": {
+    "scale": 0.5,
+    "position": "center",
+    "opacity": 250,
+    "margin": 0,
+    "corner_radius": 50,
+    "description": "Large centered avatar with rounded corners"
+  }
+}

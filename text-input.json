@@ -1,0 +1,26 @@
+{
+    "input": {
+        "task_type": "avatar_video",
+        "data": {
+            "script": "Imagine yourself aboard the breathtaking Sunseeker 88 Yacht, where luxury meets performance. Picture the sleek lines and the exhilarating speed of thirty knots as you escape to your private paradise. This isn’t just a yacht; it’s your sanctuary, designed for those who demand excellence.  Don’t miss this chance to elevate your journey. Experience the ultimate in comfort and style. Why wait? Discover your sea escape today with Sunseeker, the leader in luxury yachts. Act now and embrace the lifestyle you deserve.",
+            "aspectRatio": "9x16",
+            "style": "SliderEffectTemplate",
+            "imageUrls": [
+                "https://ik.imagekit.io/ckyv9pnai/scene_1.png?updatedAt=1758878540455",
+                "https://ik.imagekit.io/ckyv9pnai/scene_1.png?updatedAt=1758878540455",
+                "https://ik.imagekit.io/ckyv9pnai/scene_1.png?updatedAt=1758878540455"
+             
+        ],
+            "videoUrls": [],
+            "folder_path": "Priya",
+            "logo_url": "https://i.postimg.cc/jjW1QB0s/digi-120-x-120-px-1.jpg",
+            "avatar_url": "https://development.digiad.ai/avatar_library/Kevin/Kevin.mp3",
+            "video_avatar_url": "https://development.digiad.ai/avatar_library/Kevin/Kevin.png",
+            "template_id": "mix_1",
+            "Avatar_presigned_url":"https://development.digiad.ai/text-api/video?key=Avatar_lipsync%2Fee6773f9-2abc-4dfc-8604-02e9ea467db5.mp4"
+        }
+         ,
+        "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzNmUxNDUwMi04Y2U1LTQ2MTItOGQyMi0yMWMyNDg5MjA4M2IiLCJlbWFpbCI6ImFqYXkueGFsdEBnbWFpbC5jb20iLCJyb2xlIjoiQnJhbmQgQWRtaW4iLCJpYXQiOjE3NjE1MzcxNDUsImV4cCI6MTc2MTYyMzU0NX0.bQO2QvyNS3zTJ-xOl4VDcxAB1yWcJK8b2XqO1t7urOo"
+        
+    }
+}

@@ -138,102 +138,232 @@ export class VideoService {
     return dirs;
   }
 
-  async buildVideo(
-    scenes: Scene[],
-    effectType?: string,
-    audio_url?: string,
-    logo_url?: string,
-    avatar_url?:string,
-    background_music_url?: string,
-  ): Promise<{
-    success: boolean;
-    requestId: string;
-    finalVideo?: string;
-    error?: string;
-    stats?: any;
-  }> {
-    if (!scenes || scenes.length === 0) {
-      throw new BadRequestException('Scenes array is required and cannot be empty');
-    }
+  // async buildVideo(
+  //   scenes: Scene[],
+  //   effectType?: string,
+  //   audio_url?: string,
+  //   logo_url?: string,
+  //  avatar_url?: string,
+  //   background_music_url?: string,
+  // ): Promise<{
+  //   success: boolean;
+  //   requestId: string;
+  //   finalVideo?: string;
+  //   error?: string;
+  //   stats?: any;
+  // }> {
+  //   if (!scenes || scenes.length === 0) {
+  //     throw new BadRequestException('Scenes array is required and cannot be empty');
+  //   }
 
-    const requestId = uuidv4();
-    console.log(`\n Processing request: ${requestId}`);
+  //   const requestId = uuidv4();
+  //   console.log(`\n Processing request: ${requestId}`);
 
-    // Track this request
-    this.activeRequests.set(requestId, new Date());
+  //   // Track this request
+  //   this.activeRequests.set(requestId, new Date());
 
-    // Clean up old requests before starting new one
-    await this.cleanupOldRequests();
+  //   // Clean up old requests before starting new one
+  //   await this.cleanupOldRequests();
 
-    const dirs = this.createRequestDirs(requestId);
+  //   const dirs = this.createRequestDirs(requestId);
 
-    return new Promise((resolve, reject) => {
-      try {
-        const workerPath = path.resolve(__dirname, 'video-worker.js');
+  //   return new Promise((resolve, reject) => {
+  //     try {
+  //       const workerPath = path.resolve(__dirname, 'video-worker.js');
         
-        if (!fs.existsSync(workerPath)) {
-          throw new Error(`Worker file not found: ${workerPath}`);
-        }
+  //       if (!fs.existsSync(workerPath)) {
+  //         throw new Error(`Worker file not found: ${workerPath}`);
+  //       }
 
-        console.log(` Starting worker: ${workerPath}\n`);
+  //       console.log(` Starting worker: ${workerPath}\n`);
 
-        const worker = new Worker(workerPath, {
-          workerData: {
-            requestId,
-            scenes,
-            effectType: effectType || 'zoom_effect',
-            audio_url,
-            logo_url,
-            avatar_url,
-            background_music_url,
-            fps: this.fps,
-            dirs,
-          },
-        });
+  //       const worker = new Worker(workerPath, {
+  //         workerData: {
+  //           requestId,
+  //           scenes,
+  //           effectType: effectType || 'zoom_effect',
+  //           audio_url,
+  //           logo_url,
+  //             avatar_url,
+  //           background_music_url,
+  //           fps: this.fps,
+  //           dirs,
+  //         },
+  //       });
 
-        const timeout = setTimeout(() => {
-          worker.terminate();
-          this.activeRequests.delete(requestId);
-          reject(new Error('Video processing timeout (30 minutes exceeded)'));
-        }, 30 * 60 * 1000);
+  //       const timeout = setTimeout(() => {
+  //         worker.terminate();
+  //         this.activeRequests.delete(requestId);
+  //         reject(new Error('Video processing timeout (30 minutes exceeded)'));
+  //       }, 30 * 60 * 1000);
 
-        worker.on('message', (result) => {
-          clearTimeout(timeout);
-          console.log('\n✅ Worker completed successfully\n');
+  //       worker.on('message', (result) => {
+  //         clearTimeout(timeout);
+  //         console.log('\n✅ Worker completed successfully\n');
           
-          if (result.error) {
-            this.activeRequests.delete(requestId);
-            reject(new Error(result.error));
-          } else {
-            resolve({
-              ...result,
-              success: true,
-              requestId,
-            });
-          }
-        });
+  //         if (result.error) {
+  //           this.activeRequests.delete(requestId);
+  //           reject(new Error(result.error));
+  //         } else {
+  //           resolve({
+  //             ...result,
+  //             success: true,
+  //             requestId,
+  //           });
+  //         }
+  //       });
 
-        worker.on('error', (err) => {
-          clearTimeout(timeout);
-          this.activeRequests.delete(requestId);
-          console.error('\n❌ Worker error:', err);
-          reject(err);
-        });
+  //       worker.on('error', (err) => {
+  //         clearTimeout(timeout);
+  //         this.activeRequests.delete(requestId);
+  //         console.error('\n❌ Worker error:', err);
+  //         reject(err);
+  //       });
 
-        worker.on('exit', (code) => {
-          clearTimeout(timeout);
+  //       worker.on('exit', (code) => {
+  //         clearTimeout(timeout);
           
-          if (code !== 0) {
-            this.activeRequests.delete(requestId);
-            reject(new Error(`Worker stopped with exit code ${code}`));
-          }
-        });
-      } catch (error) {
-        this.activeRequests.delete(requestId);
-        reject(error);
-      }
-    });
+  //         if (code !== 0) {
+  //           this.activeRequests.delete(requestId);
+  //           reject(new Error(`Worker stopped with exit code ${code}`));
+  //         }
+  //       });
+  //     } catch (error) {
+  //       this.activeRequests.delete(requestId);
+  //       reject(error);
+  //     }
+  //   });
+  // }
+
+  // Updated buildVideo method for video.service.ts
+
+async buildVideo(
+  scenes: Scene[],
+  effectType?: string,
+  audio_url?: string,
+  logo_url?: string,
+  avatar_url?: string,  // ✅ Parameter defined
+  background_music_url?: string,
+  avatar_mode?: string,
+): Promise<{
+  success: boolean;
+  requestId: string;
+  finalVideo?: string;
+  error?: string;
+  stats?: any;
+}> {
+  if (!scenes || scenes.length === 0) {
+    throw new BadRequestException('Scenes array is required and cannot be empty');
   }
+
+  const requestId = uuidv4();
+  console.log(`\n🎬 Processing request: ${requestId}`);
+  
+  // DEBUG: Log what we received
+  console.log(`📥 Parameters received:`);
+  console.log(`   scenes: ${scenes.length} scenes`);
+  console.log(`   effectType: ${effectType || 'zoom_effect'}`);
+  console.log(`   audio_url: ${audio_url ? '✅ YES' : '❌ NO'}`);
+  console.log(`   logo_url: ${logo_url ? '✅ YES' : '❌ NO'}`);
+  console.log(`   avatar_url: ${avatar_url ? '✅ YES' : '❌ NO'}`);
+  console.log(`   background_music_url: ${background_music_url ? '✅ YES' : '❌ NO'}`);
+  console.log(`   avatar_mode: ${avatar_mode || 'mix_mode_new (default)'}`);
+  
+  if (avatar_url) {
+    console.log(`👤 Avatar URL received: ${avatar_url.substring(0, 100)}...`);
+  } else {
+    console.warn(`⚠️ Avatar URL is missing/undefined/null!`);
+  }
+
+  // Track this request
+  this.activeRequests.set(requestId, new Date());
+
+  // Clean up old requests before starting new one
+  await this.cleanupOldRequests();
+
+  const dirs = this.createRequestDirs(requestId);
+
+  return new Promise((resolve, reject) => {
+    try {
+      const workerPath = path.resolve(__dirname, 'video-worker.js');
+      
+      if (!fs.existsSync(workerPath)) {
+        throw new Error(`Worker file not found: ${workerPath}`);
+      }
+
+      console.log(`🚀 Starting worker: ${workerPath}`);
+      
+      // Prepare worker data
+      const workerData = {
+        requestId,
+        scenes,
+        effectType: effectType || 'zoom_effect',
+        audio_url,
+        logo_url,
+        avatar_url,  // ✅ Explicitly pass avatar_url
+        background_music_url,
+        avatarMode: avatar_mode,
+        fps: this.fps,
+        dirs,
+      };
+      
+      // DEBUG: Log what we're sending to worker
+      console.log(`\n📤 Sending to worker:`);
+      console.log(`   requestId: ${workerData.requestId}`);
+      console.log(`   scenes: ${workerData.scenes.length}`);
+      console.log(`   effectType: ${workerData.effectType}`);
+      console.log(`   audio_url: ${workerData.audio_url ? 'YES' : 'NO'}`);
+      console.log(`   logo_url: ${workerData.logo_url ? 'YES' : 'NO'}`);
+      console.log(`   avatar_url: ${workerData.avatar_url ? 'YES' : 'NO'}`);
+      console.log(`   background_music_url: ${workerData.background_music_url ? 'YES' : 'NO'}\n`);
+
+      const worker = new Worker(workerPath, {
+        workerData: workerData,
+      });
+
+      const timeout = setTimeout(() => {
+        worker.terminate();
+        this.activeRequests.delete(requestId);
+        reject(new Error('Video processing timeout (30 minutes exceeded)'));
+      }, 30 * 60 * 1000);
+
+      worker.on('message', (result) => {
+        clearTimeout(timeout);
+        console.log('\n✅ Worker completed successfully\n');
+        
+        if (result.error) {
+          this.activeRequests.delete(requestId);
+          reject(new Error(result.error));
+        } else {
+          resolve({
+            ...result,
+            success: true,
+            requestId,
+          });
+        }
+      });
+
+      worker.on('error', (err) => {
+        clearTimeout(timeout);
+        this.activeRequests.delete(requestId);
+        console.error('\n❌ Worker error:', err);
+        reject(err);
+      });
+
+      worker.on('exit', (code) => {
+        clearTimeout(timeout);
+        
+        if (code !== 0) {
+          this.activeRequests.delete(requestId);
+          reject(new Error(`Worker stopped with exit code ${code}`));
+        }
+      });
+    } catch (error) {
+      this.activeRequests.delete(requestId);
+      reject(error);
+    }
+  });
+}
 
   async validateVideoFile(filePath: string): Promise<boolean> {
     try {
