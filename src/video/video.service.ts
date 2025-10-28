@@ -245,6 +245,7 @@ async buildVideo(
   avatar_url?: string,  // ✅ Parameter defined
   background_music_url?: string,
   avatar_mode?: string,
+  avatar_mask_url?: string,
 ): Promise<{
   success: boolean;
   requestId: string;
@@ -267,7 +268,8 @@ async buildVideo(
   console.log(`   logo_url: ${logo_url ? '✅ YES' : '❌ NO'}`);
   console.log(`   avatar_url: ${avatar_url ? '✅ YES' : '❌ NO'}`);
   console.log(`   background_music_url: ${background_music_url ? '✅ YES' : '❌ NO'}`);
-  console.log(`   avatar_mode: ${avatar_mode || 'mix_mode_new (default)'}`);
+  console.log(`   avatar_mode: ${avatar_mode || 'mask-based-bottom-left (default)'}`);
+  console.log(`   avatar_mask_url: ${avatar_mask_url ? '✅ YES' : '❌ NO'}`);
   
   if (avatar_url) {
     console.log(`👤 Avatar URL received: ${avatar_url.substring(0, 100)}...`);
@@ -303,6 +305,7 @@ async buildVideo(
         avatar_url,  // ✅ Explicitly pass avatar_url
         background_music_url,
         avatarMode: avatar_mode,
+        avatarMaskUrl: avatar_mask_url,
         fps: this.fps,
         dirs,
       };

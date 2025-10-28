@@ -17,9 +17,7 @@ const execPromise = promisify(exec);
 
 export class AvatarBackgroundService {
   
-  /**
-   * Generate background video from scenes
-   */
+
   async generateBackgroundVideo(options: BackgroundGenerationOptions): Promise<string[]> {
     const { scenes, effectType, dirs, fps, templates, templateName, logoPath } = options;
     
@@ -103,9 +101,7 @@ export class AvatarBackgroundService {
     }
   }
 
-  /**
-   * Concatenate background clips into single video
-   */
+ 
   async concatenateBackgroundClips(
     clipPaths: string[], 
     outputPath: string, 
@@ -153,9 +149,7 @@ export class AvatarBackgroundService {
     }
   }
 
-  /**
-   * Get video dimensions
-   */
+  
   async getVideoDimensions(videoPath: string): Promise<{ width: number; height: number }> {
     try {
       const { stdout } = await execPromise(

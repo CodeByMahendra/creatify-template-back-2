@@ -44,6 +44,11 @@ export interface AvatarConfig {
     max_interval?: number;
     disappear_prob?: number;
     EPSILON?: number;
+    remove_background?: boolean;
+    chroma_color?: string; 
+    detect_body_parts?: boolean;       
+    advanced_cropping?: boolean; 
+     use_mask?: boolean;     
     description?: string;
   };
 }

@@ -6,11 +6,12 @@ export { AvatarForegroundService } from './foreground/avatar-foreground.service'
 export { AvatarBackgroundService } from './background/avatar-background.service';
 export { AvatarCompositorService } from './compositor/avatar-compositor.service';
 export { AvatarConfigService } from './config/avatar-config.service';
+export { AvatarMaskService } from './utills/mask.utills';
 
 // Types
 export * from './types';
 
-// Main Avatar Service that orchestrates everything
+
 import { AvatarForegroundService } from './foreground/avatar-foreground.service';
 import { AvatarBackgroundService } from './background/avatar-background.service';
 import { AvatarCompositorService } from './compositor/avatar-compositor.service';
@@ -54,6 +55,7 @@ export class AvatarService {
     templates: any;
     templateName?: string;
     logoPath?: string;
+    avatarMaskPath?: string;
   }): Promise<string> {
     console.log(`\n${'='.repeat(80)}`);
     console.log(`🎬 AVATAR VIDEO GENERATION PIPELINE`);
@@ -129,7 +131,8 @@ export class AvatarService {
           foregroundOptions.avatarConfig,
           runFfmpeg,
           foregroundOptions.canvasWidth,
-          foregroundOptions.canvasHeight
+          foregroundOptions.canvasHeight,
+          options.avatarMaskPath
         );
       }
 
